@@ -12,8 +12,9 @@ class SoplangBuiltins:
         Args:
             message: The message to print (default: empty string)
         """
-        print(message)
-        return message
+        s = SoplangBuiltins.qoraal(message)
+        print(s)
+        return s
 
     @staticmethod
     def gelin(prompt=""):
