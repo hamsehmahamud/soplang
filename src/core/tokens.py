@@ -43,7 +43,7 @@ class TokenType(Enum):
     STAR = "*"
     SLASH = "/"
     MODULO = "%"  # Added modulo operator for remainder
-    EQUAL = "="
+    EQUAL = "=="
     NOT_EQUAL = "!="
     GREATER = ">"
     LESS = "<"
