@@ -16,6 +16,7 @@ import traceback
 from pathlib import Path
 
 from colorama import Fore, Style, init
+from prompt_toolkit.formatted_text import ANSI
 
 # Import readline conditionally - use it on Unix/Mac, but not on Windows
 if platform.system() != "Windows":
@@ -25,7 +26,6 @@ else:
     try:
         from prompt_toolkit import PromptSession
         from prompt_toolkit.history import FileHistory
-        from prompt_toolkit.formatted_text import HTML
 
         USE_PROMPT_TOOLKIT = True
     except ImportError:
@@ -115,7 +115,7 @@ class SoplangShell:
                     else:
                         # Colorized prompt for other platforms or with prompt_toolkit
                         if platform.system() == "Windows":
-                            prompt_text = HTML("<ansicyan><b>soplang></b></ansicyan> ")
+                            prompt_text = ANSI("\x1b[36m\x1b[1msoplang\x1b[0m")
                         else:
                             prompt_text = "\n\033[1;36msoplang>\033[0m "
 
