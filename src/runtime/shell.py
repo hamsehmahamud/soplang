@@ -25,6 +25,7 @@ else:
     try:
         from prompt_toolkit import PromptSession
         from prompt_toolkit.history import FileHistory
+        from prompt_toolkit.formatted_text import HTML
 
         USE_PROMPT_TOOLKIT = True
     except ImportError:
@@ -113,7 +114,7 @@ class SoplangShell:
                         prompt_text = "\nsoplang> "
                     else:
                         # Colorized prompt for other platforms or with prompt_toolkit
-                        prompt_text = "\n\033[1;36msoplang>\033[0m "
+                        prompt_text = HTML("<ansicyan><b>soplang</b></ansicyan> ")
 
                 # Get user input with the appropriate input method
                 if platform.system() == "Windows" and USE_PROMPT_TOOLKIT:
