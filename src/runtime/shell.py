@@ -115,7 +115,7 @@ class SoplangShell:
                     else:
                         # Colorized prompt for other platforms or with prompt_toolkit
                         if platform.system() == "Windows":
-                            prompt_text = ANSI("\x1b[36m\x1b[1msoplang\x1b[0m")
+                            prompt_text = ANSI("\x1b[36m\x1b[1msoplang>\x1b[0m ")
                         else:
                             prompt_text = "\n\033[1;36msoplang>\033[0m "
 
