@@ -114,7 +114,7 @@ class SoplangShell:
                         prompt_text = "\nsoplang> "
                     else:
                         # Colorized prompt for other platforms or with prompt_toolkit
-                        prompt_text = HTML("<ansicyan><b>soplang</b></ansi")
+                        prompt_text = HTML("<ansicyan><b>soplang</b></ansicyan")
 
                 # Get user input with the appropriate input method
                 if platform.system() == "Windows" and USE_PROMPT_TOOLKIT:
