@@ -56,3 +56,12 @@ impl fmt::Display for SoplangError {
 }
 
 impl std::error::Error for SoplangError {}
+
+/// Build a parser error at the given source location.
+pub fn parser_error(msg: impl Into<String>, line: usize, col: usize) -> SoplangError {
+    SoplangError::Parser {
+        msg:  msg.into(),
+        line,
+        col,
+    }
+}
