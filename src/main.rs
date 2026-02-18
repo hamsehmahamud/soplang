@@ -26,7 +26,7 @@ fn main() {
     match lexer.tokenize() {
         Ok(tokens) => {
             for t in tokens {
-                println!("{:?}", t);
+                println!("{}", t);
             }
         }
         Err(e) => {

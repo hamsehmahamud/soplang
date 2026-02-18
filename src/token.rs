@@ -74,8 +74,11 @@ pub enum TokenType {
 #[derive(Debug, Clone)]
 pub struct Token {
     pub kind:   TokenType,
+    /// Raw text (e.g. identifier name, number string, string content).
     pub lexeme: String,
+    /// 1-based line number.
     pub line:   usize,
+    /// 1-based column number.
     pub col:    usize,
 }
 
@@ -87,5 +90,16 @@ impl Token {
             line,
             col,
         }
+    }
+}
+
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let lexeme = if self.lexeme.is_empty() {
+            String::new()
+        } else {
+            format!(" {:?}", self.lexeme)
+        };
+        write!(f, "Token({:?}{} line={} col={})", self.kind, lexeme, self.line, self.col)
     }
 }

@@ -4,6 +4,7 @@
 use std::fmt;
 
 #[derive(Debug)]
+#[allow(dead_code)] // Parser, Runtime, Type, Import used in Phase 2+
 pub enum SoplangError {
     Lexer {
         msg:  String,

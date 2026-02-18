@@ -8,6 +8,7 @@ use crate::error::SoplangError;
 use crate::token::{Token, TokenType};
 
 pub struct Lexer<'a> {
+    #[allow(dead_code)] // kept for future error reporting (source lines)
     source:  &'a str,
     chars:   Peekable<Chars<'a>>,
     line:    usize,
@@ -270,6 +271,57 @@ impl<'a> Lexer<'a> {
                 col:  self.col,
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tokenize_hello() {
+        let source = r#"qor("Salaan, Adduunka!")"#;
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens.len(), 5); // qor, (, string, ), eof
+        assert_eq!(tokens[0].kind, TokenType::Qor);
+        assert_eq!(tokens[1].kind, TokenType::LParen);
+        assert_eq!(tokens[2].kind, TokenType::String);
+        assert_eq!(tokens[2].lexeme, "Salaan, Adduunka!");
+        assert_eq!(tokens[3].kind, TokenType::RParen);
+        assert_eq!(tokens[4].kind, TokenType::Eof);
+    }
+
+    #[test]
+    fn tokenize_keywords_and_operators() {
+        let source = "door x = 1 + 2";
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0].kind, TokenType::Door);
+        assert_eq!(tokens[1].kind, TokenType::Identifier);
+        assert_eq!(tokens[2].kind, TokenType::Assign);
+        assert_eq!(tokens[3].kind, TokenType::Number);
+        assert_eq!(tokens[4].kind, TokenType::Plus);
+        assert_eq!(tokens[5].kind, TokenType::Number);
+    }
+
+    #[test]
+    fn tokenize_comments() {
+        let source = "// skip\nqor(1)";
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0].kind, TokenType::Qor);
+        assert_eq!(tokens[1].kind, TokenType::LParen);
+        assert_eq!(tokens[2].kind, TokenType::Number);
+        assert_eq!(tokens[2].lexeme, "1");
+    }
+
+    #[test]
+    fn unterminated_string_error() {
+        let source = r#"qor("unclosed"#;
+        let mut lexer = Lexer::new(source);
+        let res = lexer.tokenize();
+        assert!(res.is_err());
     }
 }
 
