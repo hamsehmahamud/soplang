@@ -21,6 +21,9 @@ Soplang is the Somali programming language, designed to make programming accessi
 - [Performance](build/PERFORMANCE.md) - Performance benchmarks and optimization techniques
 - [C Implementation](build/README_C.md) - Information about the C implementation
 
+### Architecture & Internals
+- [Python Implementation Architecture](architecture/PYTHON_ARCHITECTURE.md) - High-level design, pipeline, algorithms, data structures, and design patterns for the Python reference interpreter
+
 ### Testing
 - [Testing Guide](testing/TESTING.md) - How to test Soplang
 - [Test README](testing/README-TESTS.md) - Additional test documentation
