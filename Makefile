@@ -5,11 +5,11 @@
 PYTHON := python3
 PIP := $(PYTHON) -m pip
 
-# Directories to clean/search
-SRC_DIRS := src tests examples scripts
+# Directories to clean/search (Python implementation and tests live in psrc/)
+SRC_DIRS := psrc examples scripts
 
 # Command flags
-PYTEST_FLAGS := -v --cov=src
+PYTEST_FLAGS := -v --cov=psrc
 FLAKE8_FLAGS := --max-line-length=88 --extend-ignore=E203
 BLACK_FLAGS := --line-length=88
 ISORT_FLAGS := --profile black --filter-files
@@ -35,18 +35,18 @@ help:
 # Installation targets
 .PHONY: install install-dev
 install:
-	$(PIP) install -r requirements.txt
-	$(PIP) install -r requirements-dev.txt
+	$(PIP) install -r psrc/requirements.txt
+	$(PIP) install -r psrc/requirements-dev.txt
 	pre-commit install
 
 install-dev:
-	$(PIP) install -r requirements-dev.txt
+	$(PIP) install -r psrc/requirements-dev.txt
 	pre-commit install
 
-# Testing target
+# Testing target (Python tests live in psrc/)
 .PHONY: test
 test:
-	./run_tests.py
+	$(PYTHON) psrc/run_tests.py
 
 # Code formatting targets
 .PHONY: format format-check
@@ -101,7 +101,7 @@ docker-build:
 
 docker-run:
 	docker-compose up -d
-	docker-compose exec soplang python main.py
+	docker-compose exec soplang python -m psrc
 
 # Run targets for Soplang
 .PHONY: shell run

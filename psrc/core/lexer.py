@@ -1,5 +1,5 @@
-from src.core.tokens import TokenType
-from src.utils.errors import LexerError
+from psrc.core.tokens import TokenType
+from psrc.utils.errors import LexerError
 
 
 class Token:

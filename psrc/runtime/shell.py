@@ -31,11 +31,11 @@ else:
     except ImportError:
         USE_PROMPT_TOOLKIT = False
 
-from src.core.lexer import Lexer, Token
-from src.core.parser import Parser
-from src.core.tokens import TokenType
-from src.runtime.interpreter import Interpreter
-from src.utils.errors import (
+from psrc.core.lexer import Lexer, Token
+from psrc.core.parser import Parser
+from psrc.core.tokens import TokenType
+from psrc.runtime.interpreter import Interpreter
+from psrc.utils.errors import (
     ImportError,
     LexerError,
     ParserError,
@@ -309,7 +309,7 @@ class SoplangShell:
                             return
                         except Exception as e:
                             # Create a proper Soplang error for any issues
-                            from src.utils.errors import RuntimeError
+                            from psrc.utils.errors import RuntimeError
 
                             error = RuntimeError(f"Khalad fulinta: {str(e)}")
                             print(f"\033[31m{error.message}\033[0m")
@@ -406,7 +406,7 @@ class SoplangShell:
                                 pass
 
                             # Use the exact error format from errors.py
-                            from src.utils.errors import TypeError
+                            from psrc.utils.errors import TypeError
 
                             error = TypeError(
                                 "type_mismatch",
@@ -429,7 +429,7 @@ class SoplangShell:
                             return
                         else:
                             # Use the exact error format from errors.py
-                            from src.utils.errors import TypeError
+                            from psrc.utils.errors import TypeError
 
                             error = TypeError(
                                 "type_mismatch",
@@ -471,7 +471,7 @@ class SoplangShell:
                 # Check if main.py exists before trying to run it
                 if not os.path.exists(main_path):
                     # Use Soplang's ParserError
-                    from src.utils.errors import ParserError
+                    from psrc.utils.errors import ParserError
 
                     # Create a proper Soplang parser error
                     error = ParserError(
@@ -505,7 +505,7 @@ class SoplangShell:
 
                     # Handle error gracefully using Soplang's error system
                     if process.returncode != 0:
-                        from src.utils.errors import (
+                        from psrc.utils.errors import (
                             ParserError,
                             RuntimeError,
                             SoplangError,
@@ -523,7 +523,7 @@ class SoplangShell:
 
                         # If we couldn't find a Soplang error, create an appropriate one using the ErrorMessageManager
                         if "ModuleNotFoundError" in stderr or "ImportError" in stderr:
-                            from src.utils.errors import (
+                            from psrc.utils.errors import (
                                 ErrorMessageManager,
                                 ImportError,
                             )
@@ -535,7 +535,7 @@ class SoplangShell:
                             )
                             print(f"\033[31m{error_msg}\033[0m")
                         elif "FileNotFoundError" in stderr:
-                            from src.utils.errors import (
+                            from psrc.utils.errors import (
                                 ErrorMessageManager,
                                 ImportError,
                             )
@@ -545,7 +545,7 @@ class SoplangShell:
                             )
                             print(f"\033[31m{error_msg}\033[0m")
                         elif "SyntaxError" in stderr or "unexpected token" in stderr:
-                            from src.utils.errors import (
+                            from psrc.utils.errors import (
                                 ErrorMessageManager,
                                 ParserError,
                             )
@@ -556,7 +556,7 @@ class SoplangShell:
                             )
                             print(f"\033[31m{error_msg}\033[0m")
                         elif "TypeError" in stderr:
-                            from src.utils.errors import ErrorMessageManager, TypeError
+                            from psrc.utils.errors import ErrorMessageManager, TypeError
 
                             error_msg = ErrorMessageManager.get_type_error(
                                 "invalid_operand", operator="?", type_name="?"
@@ -564,7 +564,7 @@ class SoplangShell:
                             print(f"\033[31m{error_msg}\033[0m")
                         elif "NameError" in stderr:
                             # Try to extract the variable name from the NameError message
-                            from src.utils.errors import (
+                            from psrc.utils.errors import (
                                 ErrorMessageManager,
                                 RuntimeError,
                             )
@@ -578,7 +578,7 @@ class SoplangShell:
                             )
                             print(f"\033[31m{error_msg}\033[0m")
                         else:
-                            from src.utils.errors import (
+                            from psrc.utils.errors import (
                                 ErrorMessageManager,
                                 RuntimeError,
                             )
@@ -589,7 +589,7 @@ class SoplangShell:
                             print(f"\033[31m{error_msg}\033[0m")
 
                 except subprocess.SubprocessError:
-                    from src.utils.errors import ErrorMessageManager, RuntimeError
+                    from psrc.utils.errors import ErrorMessageManager, RuntimeError
 
                     error_msg = ErrorMessageManager.get_runtime_error(
                         "Khalad fulinta: Ma awoodin inaan koodka fuliyo"
@@ -605,7 +605,7 @@ class SoplangShell:
 
         except Exception as e:
             # Convert Python exception to Soplang error using ErrorMessageManager
-            from src.utils.errors import ErrorMessageManager, RuntimeError, SoplangError
+            from psrc.utils.errors import ErrorMessageManager, RuntimeError, SoplangError
 
             # If it's already a SoplangError, use its message
             if isinstance(e, SoplangError):
@@ -772,7 +772,7 @@ class SoplangShell:
 
         try:
             # Use the run_soplang_file function from src/runtime/main.py
-            from src.runtime.main import run_soplang_file
+            from psrc.runtime.main import run_soplang_file
 
             # Call the function that properly tokenizes, parses, and interprets the file
             # The run_soplang_file function now handles all output formatting

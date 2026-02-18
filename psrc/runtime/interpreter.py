@@ -1,15 +1,15 @@
 import os
 
-from src.core.ast import ASTNode, NodeType
-from src.core.tokens import TokenType
-from src.stdlib.builtins import (
+from psrc.core.ast import ASTNode, NodeType
+from psrc.core.tokens import TokenType
+from psrc.stdlib.builtins import (
     SoplangBuiltins,
     get_builtin_functions,
     get_list_methods,
     get_object_methods,
     get_string_methods,
 )
-from src.utils.errors import (
+from psrc.utils.errors import (
     BreakSignal,
     ContinueSignal,
     ImportError,
@@ -552,8 +552,8 @@ class Interpreter:
                 code = f.read()
 
             # Import the modules only when needed
-            from src.core.lexer import Lexer
-            from src.core.parser import Parser
+            from psrc.core.lexer import Lexer
+            from psrc.core.parser import Parser
 
             lexer = Lexer(code)
             tokens = lexer.tokenize()
@@ -786,7 +786,7 @@ class Interpreter:
             # Handle string concatenation
             if isinstance(left, str) or isinstance(right, str):
                 # Import SoplangBuiltins for proper string conversion
-                from src.stdlib.builtins import SoplangBuiltins
+                from psrc.stdlib.builtins import SoplangBuiltins
 
                 # Use qoraal for proper string conversion (including booleans to been/run)
                 return SoplangBuiltins.qoraal(left) + SoplangBuiltins.qoraal(right)

@@ -1,6 +1,6 @@
-from src.core.ast import ASTNode, NodeType
-from src.core.tokens import TokenType
-from src.utils.errors import ParserError
+from psrc.core.ast import ASTNode, NodeType
+from psrc.core.tokens import TokenType
+from psrc.utils.errors import ParserError
 
 
 class Parser:

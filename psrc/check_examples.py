@@ -10,11 +10,12 @@ EXPECTED_ERROR_FILES = [
 ]
 
 
-def run_example(filepath, filename):
+def run_example(project_root, filepath, filename):
     """Run a Soplang example file and return success/failure with error message"""
     try:
         result = subprocess.run(
-            ["python", "main.py", filepath],
+            ["python", "-m", "psrc", filepath],
+            cwd=project_root,
             capture_output=True,
             text=True,
             timeout=5,  # 5 second timeout
@@ -37,8 +38,11 @@ def run_example(filepath, filename):
 
 
 def main():
-    """Check all example files in the examples directory"""
-    examples_dir = "examples"
+    """Check all example files in the examples directory (at project root)."""
+    # This script lives in psrc/; project root is parent dir
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    examples_dir = os.path.join(project_root, "examples")
     files = [f for f in os.listdir(examples_dir) if f.endswith(".sop")]
     files.sort()  # Sort files for consistent output
 
@@ -50,7 +54,7 @@ def main():
     for filename in files:
         filepath = os.path.join(examples_dir, filename)
         print(f"Testing {filename}...", end=" ")
-        success, error = run_example(filepath, filename)
+        success, error = run_example(project_root, filepath, filename)
 
         if success:
             print("✅ Success")

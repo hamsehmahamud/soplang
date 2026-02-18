@@ -1,8 +1,8 @@
 import unittest
-from src.core.lexer import Lexer
-from src.core.parser import Parser
-from src.core.ast import NodeType
-from src.core.tokens import TokenType
+from psrc.core.lexer import Lexer
+from psrc.core.parser import Parser
+from psrc.core.ast import NodeType
+from psrc.core.tokens import TokenType
 
 
 class TestParser(unittest.TestCase):

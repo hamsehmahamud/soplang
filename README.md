@@ -2,136 +2,80 @@
 
 > The Somali Programming Language
 
-Soplang is a programming language with syntax inspired by Somali language, making programming more accessible to Somali speakers. It uniquely combines static and dynamic typing systems in one elegant language with a focus on clarity and ease of use.
+Soplang is a programming language with syntax inspired by Somali, making programming more accessible to Somali speakers. It combines static and dynamic typing in one language with a focus on clarity and ease of use.
 
-**New to Soplang?** Check out our [comprehensive Installation Guide](docs/installation.md) for detailed setup instructions on all platforms.
+**The project is being rebuilt in Rust.** The repository layout separates the future Rust implementation from reference implementations and general project files.
+
+## Project structure
+
+| Path | Description |
+|------|-------------|
+| **Rust (coming)** | Primary implementation. The codebase is being migrated to Rust for performance and a single native binary. |
+| **csrc/** | C reference implementation (lexer, parser, runtime, stdlib). |
+| **psrc/** | Python reference implementation. All Python code (interpreter, tests, tooling) lives here. See [psrc/README.md](psrc/README.md). |
+| **examples/** | Soplang example programs (`.sop` files). |
+| **docs/** | Documentation (installation, language reference, contributing). |
+| **windows/**, **linux/**, **macos/** | Platform-specific build and packaging scripts. |
+| **scripts/** | Build, test, and benchmark scripts. |
+
+Root-level files are general project files: `LICENSE`, `CHANGELOG.md`, `Makefile`, `build.sh`, `grammar.ebnf`, `main.py` (thin stub that runs the Python implementation), and `setup.py` (installs the Python package from `psrc/`).
 
 ## Features
 
-- **Powerful type system** - Combines both static typing (`abn`, `qoraal`, etc.) and dynamic typing (`door`) in one language
-- **Somali-based syntax** - programming concepts expressed in Somali
-- **Modern paradigms** - supports functional, procedural, and object-oriented programming
-- **Type safety** - enforces type checking at runtime
-- **Interpreter-based** - easy to run on any platform with Python
-- **Interactive shell** - REPL for quick experimentation
-- **Cross-platform** - dedicated installers for Windows, Linux, and macOS
-- **Docker support** - run anywhere with Docker without installation
-- **File extensions** - uses `.sop` (primary) and `.so` (secondary) file extensions
+- **Dual type system** — Static typing (`abn`, `qoraal`, etc.) and dynamic typing (`door`) in one language
+- **Somali-based syntax** — Keywords and concepts in Somali
+- **Modern paradigms** — Functional, procedural, and object-oriented support
+- **Interactive shell** — REPL for experimentation
+- **Cross-platform** — Installers and guides for Windows, Linux, and macOS
 
 ## Example
 
-```js
-// Hello World
-qor("Salaan, Adduunka!")  // Prints: Hello, World!
+```sop
+qor("Salaan, Adduunka!")   // Hello, World!
 
-// Variables with dual type system in action
-door magac = "Sharafdin"  // Dynamic typing - can change type later
-door num = 10             // Also dynamic
-num = "new value"         // Valid: dynamic variables can change types
+door magac = "Sharafdin"
+abn age = 25
 
-// Static typing examples
-qoraal name = "Sharafdin" // Static typing - string only
-abn age = 25             // Static typing - number only
-
-// Type safety enforcement
-// age = "25"             // Would cause runtime error - type mismatch
-
-// Control flow
-haddii (age > 18) {
-    qor("Waa qof weyn")   // Is an adult
-} ugudambeyn {
-    qor("Waa qof yar")    // Is a child
-}
-
-// Functions
 hawl salaam(qof) {
     celi "Salaan, " + qof + "!"
 }
-qor(salaam(magac))        // Prints: Salaan, Sharafdin!
+qor(salaam(magac))
 ```
+
+## Running Soplang today
+
+Until the Rust implementation is ready, you can run the **Python implementation** from the `psrc/` directory. From the project root:
+
+```bash
+# Install the Python package (installs psrc)
+pip install -e .
+
+# Run interactive shell
+python -m psrc
+
+# Run a file
+python -m psrc examples/hello.sop
+
+# Or use the stub at root (same as above)
+python main.py examples/hello.sop
+```
+
+See **[psrc/README.md](psrc/README.md)** for Python-specific setup, testing, and building.
+
+## Rust (planned)
+
+The main interpreter will be reimplemented in Rust. The root of the repository will then provide:
+
+- `cargo build` / `cargo run` for the primary Soplang binary
+- `csrc/` and `psrc/` kept as reference or fallback implementations
 
 ## Documentation
 
-- [Getting Started](docs/index.md)
-- [Language Reference](docs/language/keywords.md)
-- [Examples](examples/)
-- [Contributing Guide](docs/CONTRIBUTING.md)
-- [Docker Guide](docs/docker.md)
-
-## Installation
-
-For detailed installation instructions, see the [Installation Guide](docs/installation.md).
-
-### Download Installers
-
-The easiest way to get started is to download a pre-built installer from our [releases page](https://github.com/sharafdin/soplang/releases).
-
-### Using Docker (No Installation Required)
-
-You can run Soplang using Docker without installing anything:
-
-```bash
-# Run the interactive shell
-docker run -it --rm soplang/soplang
-
-# Run a Soplang script
-docker run -it --rm -v $(pwd):/scripts soplang/soplang my_script.sop
-```
-
-See the [Docker Guide](docs/docker.md) for more details.
-
-### Building from Source
-
-If you want to build Soplang from source, refer to the platform-specific build guides:
-
-- **Windows**: See the [Windows Build Guide](windows/WINDOWS_BUILD_GUIDE.md)
-- **Linux**: See the [Linux Build Guide](linux/README.md)
-- **macOS**: See the [macOS Build Guide](macos/README.md)
-
-You can also use our universal build script that automatically detects your platform:
-
-```bash
-# Clone the repository
-git clone https://github.com/sharafdin/soplang.git
-cd soplang
-
-# Run the universal build script
-./build.sh  # (may need chmod +x build.sh on Unix systems)
-```
-
-## Development
-
-We provide a Makefile to simplify common development tasks:
-
-```bash
-# Setup your development environment
-make install
-
-# Run the interactive shell
-make shell
-
-# Run tests
-make test
-
-# Format code
-make format
-
-# See all commands
-make help
-```
-
-## Releases
-
-Soplang uses an automated release process powered by GitHub Actions. For details on creating releases, see our [Release Process Documentation](docs/RELEASE_PROCESS.md).
-
-## Contributing
-
-Contributions are welcome! See our [Contributing Guide](docs/CONTRIBUTING.md) for details on how to get started.
-
-## Code of Conduct
-
-We are committed to providing a welcoming and inclusive experience for everyone. Please read our [Code of Conduct](CODE_OF_CONDUCT.md) to understand the community standards we uphold.
+- [Getting started](docs/index.md)
+- [Language reference](docs/language/keywords.md)
+- [Installation](docs/installation.md)
+- [Contributing](docs/CONTRIBUTING.md)
 
 ## License
 
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).

@@ -21,22 +21,22 @@ programming more inclusive while maintaining a strong technical foundation.
 """
 
 # Core language components
-from src.core.lexer import Lexer, Token
-from src.core.parser import Parser
-from src.core.tokens import TokenType
-from src.core.ast import ASTNode, NodeType
+from psrc.core.lexer import Lexer, Token
+from psrc.core.parser import Parser
+from psrc.core.tokens import TokenType
+from psrc.core.ast import ASTNode, NodeType
 
 # Runtime components
-from src.runtime.interpreter import Interpreter
-from src.runtime.shell import SoplangShell
+from psrc.runtime.interpreter import Interpreter
+from psrc.runtime.shell import SoplangShell
 
 # Utilities and error handling
-from src.utils.errors import (
+from psrc.utils.errors import (
     SoplangError, LexerError, ParserError, RuntimeError,
     TypeError, ImportError, BreakSignal, ContinueSignal, ReturnSignal
 )
 
 # Standard library
-from src.stdlib.builtins import get_builtin_functions, get_list_methods, get_object_methods
+from psrc.stdlib.builtins import get_builtin_functions, get_list_methods, get_object_methods
 
 # Make src a proper Python package

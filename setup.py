@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
+import os
 import sys
 
 from setuptools import find_packages, setup
 
-from src.core.version import VERSION
+from psrc.core.version import VERSION
 
-# Read requirements from requirements.txt
-with open("requirements.txt") as f:
+# Read requirements from psrc (Python implementation lives in psrc/)
+with open(os.path.join(os.path.dirname(__file__), "psrc", "requirements.txt")) as f:
     requirements = [
         line.strip() for line in f if not line.startswith("#") and line.strip()
     ]
@@ -36,7 +37,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "soplang=main:main",
+            "soplang=psrc.__main__:main",
         ],
     },
     classifiers=[

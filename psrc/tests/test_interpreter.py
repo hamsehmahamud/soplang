@@ -1,9 +1,9 @@
 import unittest
 import io
 import sys
-from src.core.lexer import Lexer
-from src.core.parser import Parser
-from src.runtime.interpreter import Interpreter
+from psrc.core.lexer import Lexer
+from psrc.core.parser import Parser
+from psrc.runtime.interpreter import Interpreter
 
 
 class TestInterpreter(unittest.TestCase):

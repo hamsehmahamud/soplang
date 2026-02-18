@@ -16,8 +16,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Install core dependencies directly (in case requirements.txt isn't present)
 RUN pip install --no-cache-dir colorama>=0.4.0 prompt_toolkit>=3.0.0
 
-# Copy requirements if it exists and install any additional dependencies
-COPY requirements.txt* ./
+# Copy Python implementation requirements
+COPY psrc/requirements.txt* ./
 RUN if [ -f requirements.txt ]; then \
     pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt; \
     fi
@@ -44,9 +44,9 @@ RUN if [ -d /wheels ]; then \
     rm -rf /wheels; \
     fi
 
-# Copy only the necessary files
+# Copy only the necessary files (main.py stub + Python implementation in psrc/)
 COPY main.py .
-COPY src/ ./src/
+COPY psrc/ ./psrc/
 
 # Create a simple executable script to run Soplang
 RUN echo '#!/bin/bash\npython /app/main.py "$@"' > /usr/local/bin/soplang && \

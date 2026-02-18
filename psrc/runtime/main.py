@@ -11,10 +11,10 @@ This module contains the core functions for running Soplang code:
 import os
 import sys
 
-from src.core.lexer import Lexer
-from src.core.parser import Parser
-from src.runtime.interpreter import Interpreter
-from src.utils.errors import SoplangError
+from psrc.core.lexer import Lexer
+from psrc.core.parser import Parser
+from psrc.runtime.interpreter import Interpreter
+from psrc.utils.errors import SoplangError
 
 
 def run_soplang_file(filename):
@@ -67,7 +67,7 @@ def run_soplang_file(filename):
         return 1  # Error
     except Exception as e:
         # Convert Python exceptions to Somali error messages
-        from src.utils.errors import RuntimeError
+        from psrc.utils.errors import RuntimeError
 
         # Format different types of Python errors as Somali errors
         if "missing 1 required positional argument" in str(e):

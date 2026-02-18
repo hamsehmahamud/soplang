@@ -1,25 +1,30 @@
 # -*- mode: python ; coding: utf-8 -*-
+# Run from project root: pyinstaller psrc/soplang.spec
 
 import os
 import platform
 block_cipher = None
 
-# Icon file path - ensure it exists
-icon_file = os.path.join('windows', 'soplang_icon.ico')
+# Resolve project root (parent of psrc/) when spec is in psrc/soplang.spec
+_spec_path = os.path.abspath(SPEC if globals().get('SPEC') else __file__)
+_spec_dir = os.path.dirname(_spec_path)
+_project_root = os.path.dirname(_spec_dir)
+
+icon_file = os.path.join(_project_root, 'windows', 'soplang_icon.ico')
 if not os.path.exists(icon_file):
     print(f"Warning: Icon file {icon_file} not found. The executable will use a default icon.")
     icon_file = None
 
 a = Analysis(
-    ['main.py'],
-    pathex=[],
+    [os.path.join(_project_root, 'main.py')],
+    pathex=[_project_root],
     binaries=[],
-    datas=[('src', 'src')],
+    datas=[(os.path.join(_project_root, 'psrc'), 'psrc')],
     hiddenimports=[
-        'src.core',
-        'src.runtime',
-        'src.stdlib',
-        'src.utils',
+        'psrc.core',
+        'psrc.runtime',
+        'psrc.stdlib',
+        'psrc.utils',
         'colorama',
         'prompt_toolkit',
         'prompt_toolkit.clipboard',
