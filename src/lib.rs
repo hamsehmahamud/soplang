@@ -6,11 +6,13 @@ pub mod interpreter;
 pub mod lexer;
 pub mod parser;
 pub mod scope;
+pub mod semantic;
 pub mod stdlib;
 pub mod token;
 pub mod value;
 
 pub use ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
+pub use semantic::{analyze, ClassMeta, FunctionMeta, Scope, SymbolTable, VarInfo};
 pub use error::{format_error_with_source, SoplangError};
 pub use interpreter::Interpreter;
 pub use lexer::Lexer;
