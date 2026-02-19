@@ -1,0 +1,12 @@
+Testing constant variables (madoor):
+  Dynamic constant PI: 3.14159
+  Typed constant MAX_USERS: 100
+  Typed string constant APP_NAME: Soplang
+  Typed boolean constant IS_PRODUCTION: been
+  Area of circle with radius 5: 78.53975
+  Users: [User 0, User 1, User 2, User 3]
+  Max users: 100
+Trying to reassign constants (should fail):
+  PI = 3.14
+  MAX_USERS = 200
+Constants test completed!

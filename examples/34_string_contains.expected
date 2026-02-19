@@ -1,0 +1,21 @@
+Testing string contains (leeyahay) method:
+Basic tests:
+  String: Barwaaqo
+  Has 'waa': run
+  Has 'bilow': been
+Case sensitivity:
+  String: Soplang waa luqad wacan
+  Has 'waa': run
+  Has 'WAA': been
+Empty string tests:
+  Empty string contains '': run
+  Normal string contains '': run
+  Empty string contains 'test': been
+Position tests:
+  Starts with 'Soplang': run
+  Ends with 'wacan': run
+Practical application:
+  Email: user@example.com
+  Contains '@': run
+  Email format is valid
+\nString contains tests completed!

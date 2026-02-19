@@ -1,0 +1,4 @@
+Testing constant error messages:
+\n1. Testing constant reassignment error:
+  Original constant value: run
+  Attempting to reassign a constant (should show error in Somali):

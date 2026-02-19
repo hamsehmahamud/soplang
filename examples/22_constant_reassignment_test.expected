@@ -1,0 +1,5 @@
+Testing constant reassignment protection:
+  Initial values:
+  PI = 3.14159
+  MAX_VALUE = 100
+Attempting to reassign PI (should cause error):

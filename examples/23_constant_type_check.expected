@@ -1,0 +1,18 @@
+Testing constant type checking:
+Checking types of constants:
+  MAX_COUNT: abn
+  APP_NAME: qoraal
+  IS_DEBUG: bool
+  ALLOWED_OPTIONS: teed
+  CONFIG: walax
+Counter: 50
+Message: Welcome to Soplang
+Debug mode is enabled
+User options: [option1, option2, option3, option4]
+Allowed options (constant): [option1, option2, option3, option4]
+Server config: localhost:8080
+Type errors if uncommented:
+  // madoor abn INVALID_INT = 'not a number'
+  // madoor qoraal INVALID_STRING = 123
+  // madoor bool INVALID_BOOL = 'not a boolean'
+Constant type checking test completed!

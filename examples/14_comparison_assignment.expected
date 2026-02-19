@@ -1,0 +1,32 @@
+Testing comparison operations in assignments:
+Integer comparisons:
+  a = 5, b = 3
+  door result1 = a > b: run
+  door result2 = a < b: been
+  door result3 = a == b: been
+  door result4 = a != b: run
+  door result5 = a >= b: run
+  door result6 = a <= b: been
+\nDecimal comparisons:
+  x = 5.5, y = 3.25
+  door result7 = x > y: run
+  door result8 = x < y: been
+  door result9 = x == y: been
+  door result10 = x != y: run
+\nMixed integer and decimal comparisons:
+  door result11 = a > y: run
+  door result12 = x == a: been
+\nBoolean type assignments:
+  bool isGreater = a > b: run
+  bool isLess = a < b: been
+  bool isEqual = a == b: been
+  bool isNotEqual = a != b: run
+  bool isDecimalGreater = x > y: run
+\nComplex expressions:
+  door complex1 = (a > b) && (a != b): run
+  door complex2 = (a < b) || (a == 5): run
+  door complex3 = (x > y) && (a == 5): run
+\nVariable reassignment:
+  Initial test value: been
+  After test = a > b: run
+  After test = x < y: been

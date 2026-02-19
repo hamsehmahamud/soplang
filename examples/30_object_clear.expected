@@ -1,0 +1,28 @@
+Testing walax.nadiifi() (object clear):
+Original object:
+  Keys: [da, degaan, hiwayado, magac, waxbarasho]
+  Values:
+    magac: Ayaan
+    da: 30
+    degaan: Muqdisho
+    waxbarasho: Jaamacad
+    hiwayado: [ciyaaro, buugagta, safar]
+\nCreated a reference to the same object
+\nClearing object using nadiifi()...
+\nAfter clearing:
+  Keys: []
+  Object is empty: run
+\nVerify reference still points to the same object (now empty):
+  Reference keys: []
+  Reference is empty: run
+\nAdding a new property after clearing:
+  Keys: [qiimo_cusub]
+  New property value: Qiimo cusub
+\nComparison with tir (manual property removal):
+  Original object2 keys: [a, b, c]
+  After manual removal: []
+  Object2 is empty: run
+\nUsing nadiifi for object with multiple properties:
+  Before clearing: [five, four, one, three, two]
+  After nadiifi: []
+\nTest completed: walax.nadiifi() removes all properties from an object

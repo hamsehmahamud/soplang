@@ -1,0 +1,21 @@
+Testing list copy (nuqul) method:
+  Original list (asalka): [1, 2, 3]
+  Copied list (nuqul_list): [1, 2, 3]
+  Original list after modification: [1, 2, 3, 4]
+  Copied list after original was modified: [1, 2, 3]
+Verifying that the copy is independent from the original:
+  asalka == nuqul_list: been
+  After adding an element to the copy:
+  Original list: [1, 2, 3, 4]
+  Modified copy: [1, 2, 3, 5]
+Testing shallow copy behavior with nested lists:
+  Original nested list: [[10, 20], [30, 40]]
+  Nested list copy: [[10, 20], [30, 40]]
+  After modifying a nested element (nested[0][0] = 15):
+  Original nested list: [[15, 20], [30, 40]]
+  Nested list copy: [[15, 20], [30, 40]]
+  After adding a new nested list to the original:
+  Original nested list: [[15, 20], [30, 40]]
+  Nested list copy: [[15, 20], [30, 40]]
+  Notice: The nested copy doesn't contain the [50, 60] element added to the original
+The nuqul() method successfully creates a shallow copy that is independent at the top level.

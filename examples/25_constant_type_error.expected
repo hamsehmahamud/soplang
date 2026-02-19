@@ -1,0 +1,2 @@
+Testing constant type error messages:
+\nAttempting to assign a number to a string constant:

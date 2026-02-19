@@ -1,0 +1,31 @@
+Testing string endsWith method (dhamaad):
+
+Basic example:
+  magac = Barwaaqo
+  magac.dhamaad(q) = been
+  magac.dhamaad(aaqo) = run
+
+More test cases:
+  Hello.dhamaad(Hello) = run
+  Hello World.dhamaad(world) = been
+  Hello World.dhamaad(World) = run
+
+Empty string edge cases:
+  Empty string.dhamaad(empty) = run
+  Something.dhamaad(empty) = run
+  Empty string.dhamaad(x) = been
+
+Practical examples:
+  Checking file extensions:
+  document.pdf is PDF? run
+  image.JPG is JPG? run
+  script.js is Python? been
+
+  Email domain validation:
+  user@example.com ends with .com: run
+
+  URL path ending validation:
+  https://example.com/ ends with slash? run
+  http://test.org ends with slash? been
+
+String endsWith tests completed!

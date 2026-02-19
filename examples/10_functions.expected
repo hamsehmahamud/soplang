@@ -1,0 +1,29 @@
+Testing functions (hawl):
+  Calling salaan function:
+  Salaan, Adduunka!
+  Testing function with integer parameters:
+  isku_dar_integers(5, 7): 12
+  isku_dar_integers(10, 20): 30
+  Testing function with decimal parameters:
+  isku_dar_decimals(5.5, 7.25): 12.75
+  isku_dar_decimals(10.1, 20.2): 30.299999999999997
+  Testing function with string parameters:
+  isku_dar_strings('Magac', 'Danbe'): MagacDanbe
+  Testing functions with specific return types:
+  laban_jibbaar_integer(8): 16
+  laban_jibbaar_decimal(8.5): 17
+  Testing function with type checking:
+  check_even(4): run
+  check_even(7): been
+  Testing decimal rounding function:
+  round_decimal(4.7): 4
+  round_decimal(9.2): 9
+  Testing function with conditional return:
+  get_grade(95): A
+  get_grade(85): B
+  get_grade(75): C
+  get_grade(65): D
+  get_grade(55): F
+  Testing generic calculation function:
+  Rectangle area (integers) calculate_area('rectangle', 5, 10): 50
+  Triangle area (decimals) calculate_area('triangle', 5.5, 10.5): 28.875

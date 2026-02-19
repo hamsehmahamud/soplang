@@ -311,7 +311,9 @@ pub fn list_muuji(lst: Rc<RefCell<Vec<Value>>>, args: &[Value]) -> Result<Value,
 // ---------- Object methods ----------
 
 pub fn object_fure(obj: Rc<RefCell<HashMap<String, Value>>>, _args: &[Value]) -> Result<Value, SoplangError> {
-    let keys: Vec<Value> = obj.borrow().keys().map(|k| Value::Str(k.clone())).collect();
+    let mut keys: Vec<String> = obj.borrow().keys().cloned().collect();
+    keys.sort();
+    let keys: Vec<Value> = keys.into_iter().map(Value::Str).collect();
     Ok(Value::List(Rc::new(RefCell::new(keys))))
 }
 
@@ -345,16 +347,24 @@ pub fn object_nadiifi(obj: Rc<RefCell<HashMap<String, Value>>>, _args: &[Value])
 }
 
 pub fn object_qiime(obj: Rc<RefCell<HashMap<String, Value>>>, _args: &[Value]) -> Result<Value, SoplangError> {
-    let vals: Vec<Value> = obj.borrow().values().cloned().collect();
+    let m = obj.borrow();
+    let mut keys: Vec<String> = m.keys().cloned().collect();
+    keys.sort();
+    let vals: Vec<Value> = keys.iter().map(|k| m.get(k).cloned().unwrap()).collect();
     Ok(Value::List(Rc::new(RefCell::new(vals))))
 }
 
 pub fn object_lamaane(obj: Rc<RefCell<HashMap<String, Value>>>, _args: &[Value]) -> Result<Value, SoplangError> {
-    let pairs: Vec<Value> = obj
-        .borrow()
+    let m = obj.borrow();
+    let mut keys: Vec<String> = m.keys().cloned().collect();
+    keys.sort();
+    let pairs: Vec<Value> = keys
         .iter()
-        .map(|(k, v)| {
-            Value::List(Rc::new(RefCell::new(vec![Value::Str(k.clone()), v.clone()])))
+        .map(|k| {
+            Value::List(Rc::new(RefCell::new(vec![
+                Value::Str(k.clone()),
+                m.get(k).cloned().unwrap(),
+            ])))
         })
         .collect();
     Ok(Value::List(Rc::new(RefCell::new(pairs))))

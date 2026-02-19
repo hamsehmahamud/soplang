@@ -1,0 +1,18 @@
+Testing list clear (nadiifi) method:
+1. Basic usage:
+  Original list: [A, B, C]
+  After nadiifi(): []
+2. Clearing an already empty list:
+  Empty list: []
+  After nadiifi(): []
+3. Clearing a list with nested elements:
+  Complex list: [[1, 2], [3, 4], 5, text]
+  After nadiifi(): []
+4. Adding items to a cleared list:
+  Original list: [10, 20, 30]
+  After nadiifi(): []
+  After adding new items: [40, 50]
+5. Chaining operations with nadiifi():
+  Original list: [1, 2, 3]
+  After: chain.nadiifi().kudar(4).kudar(5): [4, 5]
+The nadiifi() method successfully clears all items from a list.

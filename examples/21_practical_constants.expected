@@ -1,0 +1,15 @@
+Practical uses of constants (madoor):
+Application Configuration:
+  App Version: 2.0.0-beta
+  API Endpoint: https://api.example.com/v1
+  Timeout: 5000ms
+  Max Retries: 3
+  Items Per Page: 25
+Simulating API request:
+  Endpoint: https://api.example.com/v1
+  Timeout: 5000ms
+  Max Retries: 3
+  Response Status: 200
+Geometric Calculations (radius = 10):
+  Circle Area: 314.159
+  Sphere Volume: 4188.786666666666

@@ -1,0 +1,41 @@
+Testing string replace method (beddel):
+
+Basic example:
+  Original: Soplang waa fudud
+  After replacing 'fudud' with 'xoogan': Soplang waa xoogan
+
+Target doesn't exist:
+  Original: Hello World
+  After replacing 'Universe' with 'Galaxy': Hello World
+
+Case sensitivity:
+  Original: Hello world, hello everyone
+  After replacing 'hello' with 'Howdy': Hello world, Howdy everyone
+
+Replace only first occurrence:
+  Original: la la la, la la la
+  After replacing first 'la' with 'ba': ba la la, la la la
+
+Empty string tests:
+  Original: Empty test
+  Replace empty string with 'Something': SomethingEmpty test
+  Replace 'Empty' with empty string:  test
+
+Practical examples:
+  URL path update:
+  Original: https://example.com/oldpath/page.html
+  Updated: https://example.com/newpath/page.html
+
+  Number formatting:
+  Original: 1000000
+  Formatted: 1,000000
+
+  Censoring sensitive data:
+  Original: This password is secret123, don't share it
+  Censored: This password is ********, don't share it
+
+  Correcting typos:
+  Original: Salaan, Aduunka!
+  Corrected: Salaan, Adduunka!
+
+String replace tests completed!

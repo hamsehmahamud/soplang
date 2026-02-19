@@ -1,0 +1,13 @@
+Testing string methods:
+  Split by comma: [Ayaan, Cali, Zahra]
+  Split by space: [Soplang, waa, luqad, wacan]
+  Split empty string: []
+  Split with no delimiter: [hello]
+  Split with consecutive delimiters: [a, , b, c, ]
+\nIterating through split results:
+  Item 0: 1
+  Item 1: 2
+  Item 2: 3
+  Item 3: 4
+  Item 4: 5
+\nConverting split strings to numbers:

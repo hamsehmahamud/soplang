@@ -1,0 +1,27 @@
+Testing walax.nuqul() (object copy):
+Original object:
+  magac: Axmed
+  da: 25
+  waxbarasho: Jaamacad
+  hiwayado: [buugag, ciyaaro, safar]
+\nCreating a copy with nuqul()...
+\nVerifying copy is independent (shallow copy):
+  Original object and copy should be different references but contain the same values
+\nAfter changing original object's 'magac' to 'Cali':
+  Original magac: Cali
+  Copy magac: Axmed (Should still be 'Axmed')
+\nAfter changing copy's 'da' to 30:
+  Original da: 25 (Should still be 25)
+  Copy da: 30
+\nAfter adding 'degaan' property to original:
+  Original has degaan: run (Should be run)
+  Copy has degaan: been (Should be been)
+\nDemonstrating shallow copy behavior with nested arrays:
+  After adding 'daawasho' to original's 'hiwayado' array:
+  Original hiwayado: [buugag, ciyaaro, safar, daawasho]
+  Copy hiwayado: [buugag, ciyaaro, safar, daawasho] (Should also contain 'daawasho' because arrays are copied by reference)
+\nTesting with nested object:
+  After changing original's nested object property 'jinsiyad':
+  Original jinsiyad: Kenyan
+  Copy jinsiyad: Kenyan (Should also change to 'Kenyan' because of shallow copy)
+\nTest completed: walax.nuqul() creates a shallow copy of objects

@@ -1,0 +1,20 @@
+Testing list.muuji() method and negative indexing:
+Original list: [Axmed, Barwaaqo, Cali, Deeqa, Cali]
+Testing muuji() method:
+Index of 'Cali': 2
+Index of 'Zahra': null
+Index of 'Deeqa': 3
+Testing negative indexing:
+Last element [-1]: Cali
+Second last element [-2]: Deeqa
+Third last element [-3]: Cali
+Fourth last element [-4]: Barwaaqo
+Fifth last element [-5]: Axmed
+Testing negative indexing assignment:
+After changing last element: [Axmed, Barwaaqo, Cali, Deeqa, Faarax]
+After changing third last element: [Axmed, Barwaaqo, Cabdi, Deeqa, Faarax]
+Testing muuji() after modifications:
+New index of 'Cali': null
+Index of 'Faarax': 4
+Index of 'Cabdi': 2
+List muuji() and negative indexing test completed!

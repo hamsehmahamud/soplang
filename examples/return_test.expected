@@ -1,0 +1,8 @@
+Testing return statements with comparison operators:
+test_no_parens(10): run
+test_no_parens(3): been
+test_with_parens(10): run
+test_with_parens(3): been
+test_complex(10): run
+test_complex(20): been
+Test completed!

@@ -1,0 +1,27 @@
+Testing walax.qiime() (object values):
+Original object:
+  qof = {cinwaanka: {magaalo: Muqdisho, xaafad: Hodan}, da: 21, hiwayado: [buugag, ciyaaro, safar], magac: Ayaan, shaqo: macallin, waa_arday: been}
+\nKeys using fure():
+  [cinwaanka, da, hiwayado, magac, shaqo, waa_arday]
+\nValues using qiime():
+  [{magaalo: Muqdisho, xaafad: Hodan}, 21, [buugag, ciyaaro, safar], Ayaan, macallin, been]
+\nVerifying individual values match keys:
+  cinwaanka: {magaalo: Muqdisho, xaafad: Hodan}
+  da: 21
+  hiwayado: [buugag, ciyaaro, safar]
+  magac: Ayaan
+  shaqo: macallin
+  waa_arday: been
+\nTesting empty object:
+  Empty object values: []
+  Values count: 0
+\nObject with numeric values:
+  Values: [4, 1, 2, 3]
+\nModifying object values:
+  After changing age and adding to hobbies:
+  Updated values: [{magaalo: Muqdisho, xaafad: Hodan}, 22, [buugag, ciyaaro, safar, daawasho], Ayaan, macallin, been]
+\nUsing values with other functions:
+  All values are strings: run
+\nConverting all values to strings:
+  String values: [{'magaalo': Muqdisho, 'xaafad': Hodan}, 21, [buugag, ciyaaro, safar, daawasho], Ayaan, macallin, been]
+\nTest completed: walax.qiime() returns all values from an object

@@ -149,12 +149,14 @@ impl fmt::Display for Value {
             }
             Value::Object(obj) => {
                 let m = obj.borrow();
+                let mut keys: Vec<_> = m.keys().collect();
+                keys.sort();
                 write!(f, "{{")?;
-                for (i, (k, v)) in m.iter().enumerate() {
+                for (i, k) in keys.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}: {}", k, v)?;
+                    write!(f, "{}: {}", k, m.get(*k).unwrap())?;
                 }
                 write!(f, "}}")
             }
@@ -186,11 +188,12 @@ pub fn value_to_string(v: &Value) -> String {
         }
         Value::Object(obj) => {
             let m = obj.borrow();
-            let parts: Vec<String> = m
+            let mut pairs: Vec<_> = m
                 .iter()
                 .map(|(k, val)| format!("'{}': {}", k, value_to_string(val)))
                 .collect();
-            format!("{{{}}}", parts.join(", "))
+            pairs.sort();
+            format!("{{{}}}", pairs.join(", "))
         }
         Value::Function(id) => format!("{}", id),
         Value::NativeFunction(_) => "<hawl>".to_string(),

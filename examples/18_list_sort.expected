@@ -1,0 +1,18 @@
+Testing list sort (habee) method:
+  Original number list: [5, 1, 3, 4, 2]
+  After habee(): [1, 2, 3, 4, 5]
+  Original name list: [Zaynab, Cabdi, Faadumo, Axmed, Xaliimo]
+  After habee(): [Axmed, Cabdi, Faadumo, Xaliimo, Zaynab]
+  Original list: [30, 10, 20]
+  After habee() via reference: [10, 20, 30]
+  Proving it's the same reference: [10, 20, 30]
+  Empty list: []
+  After habee() on empty list: []
+  Single element list: [Solo]
+  After habee() on single element list: [Solo]
+  Method chaining:
+  Original list: [3, 1, 2]
+  After habee().kudar(4): [1, 2, 3, 4]
+  Decimal numbers list: [3.14, 1.5, 2.71, 0.99]
+  After habee(): [0.99, 1.5, 2.71, 3.14]
+List sort (habee) tests completed!

@@ -1,0 +1,20 @@
+Testing conditional statements (haddii):
+  age = 20
+  Simple if statement:
+    Person is an adult
+  If-else statement:
+    Person cannot drink alcohol
+  score = 85
+  If-else if-else statement:
+    Grade: B
+  Nested if statements:
+    Person can drive
+    Person can vote
+  x = 10, y = 20
+  Using AND (&&) operator:
+    Both conditions are true
+  Using OR (||) operator:
+    At least one condition is true
+  temperature = 37.5
+  Testing with decimal values:
+    Person has a slight temperature

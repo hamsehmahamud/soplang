@@ -1,0 +1,24 @@
+Testing switch-case (dooro/xaalad) statements:
+\n1. Simple switch with integer:
+  number = 2
+  Laba (Two)
+\n2. Switch with strings:
+  language = Somali
+  Salaan, Adduunka!
+\n3. Switch with expressions:
+  x = 10, y = 20
+  x + y equals 30
+\n4. Switch with decimal values:
+  decimal = 1.5
+  decimal equals 1.5
+\n5. Nested switch statements:
+  outer = 1, inner = 2
+  Outer case is 1
+  Inner case is 2
+\n6. Switch with function result:
+  option = B
+  Option B selected
+\n7. Switch with boolean value:
+  is_active = run
+  The system is active
+\nSwitch-case tests completed!

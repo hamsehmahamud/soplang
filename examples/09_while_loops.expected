@@ -1,0 +1,36 @@
+Testing while loops (intay):
+  Simple while loop:
+    Counter: 1
+    Counter: 2
+    Counter: 3
+    Counter: 4
+    Counter: 5
+  While loop with break (jooji):
+    Counter: 1
+    Counter: 2
+    Counter: 3
+    Counter: 4
+    Counter: 5
+    Breaking the loop at counter = 5
+  While loop with continue (soco):
+    Odd counter: 1
+    Odd counter: 3
+    Odd counter: 5
+  Nested while loops:
+    Outer loop: 1
+      Inner loop: 1
+      Inner loop: 2
+    Outer loop: 2
+      Inner loop: 1
+      Inner loop: 2
+    Outer loop: 3
+      Inner loop: 1
+      Inner loop: 2
+  While loop with decimal values:
+    x = 0.5
+    x = 1
+    x = 1.5
+    x = 2
+    x = 2.5
+  Factorial calculation for 5:
+    5! = 120
