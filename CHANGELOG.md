@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+* **Rust implementation (primary).** Full Python→Rust migration complete: lexer, parser, AST, tree-walking interpreter, stdlib (builtins + list/object/string methods), REPL, CLI (clap), coloured errors, scope/env, functions, classes, import, try/catch.
+* **Tests and benchmarks.** Unit tests (lexer, parser), integration tests (interpreter, examples vs `.expected`), Criterion benchmarks, Hyperfine Rust vs Python comparison. Makefile targets: `build`, `run`, `shell`, `test-rust`, `bench`.
+* **Compiler plan.** Soplang is defined as a compiled language; compiler work (Cranelift JIT + LLVM AOT) is documented in [COMPILER_PLAN.md](COMPILER_PLAN.md). Interpreter remains the current runtime until compiler backends are implemented.
+
+### Changed
+
+* **Primary runtime is Rust.** Run via `cargo build --release` and `./target/release/soplang`. Python (psrc) is legacy/reference only.
+* README, IMPLEMENTATION_PLAN, and docs updated to state Rust migration complete and compiler phase in progress.
+
+---
+
 ## [v2.0.0] - 2025-05-26
 
 ### Added

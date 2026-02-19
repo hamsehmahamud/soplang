@@ -4,28 +4,27 @@
 
 Soplang is a programming language with syntax inspired by Somali, making programming more accessible to Somali speakers. It combines static and dynamic typing in one language with a focus on clarity and ease of use.
 
-The **primary implementation is in Rust** (tree-walking interpreter). The repo also includes reference implementations in Python and C.
+**The primary implementation is in Rust.** The Python→Rust migration is complete: you get a single native binary (`soplang`) that runs `.sop` files and provides an interactive REPL. We are now **building the compiler**: Cranelift JIT (for fast run) and LLVM AOT (for standalone binaries). See [COMPILER_PLAN.md](COMPILER_PLAN.md).
 
 ## Project structure
 
 | Path | Description |
 |------|-------------|
-| **src/** | Rust implementation (lexer, parser, interpreter, stdlib). Build with `cargo build --release`. |
+| **src/** | Rust implementation: lexer, parser, **interpreter** (current runtime), stdlib. **Compiler** (semantic, HIR, Cranelift, LLVM) in progress per [COMPILER_PLAN.md](COMPILER_PLAN.md). |
 | **examples/** | Soplang example programs (`.sop` files). |
-| **benchmarks/** | Benchmark programs and [RESULTS.md](benchmarks/RESULTS.md) with timing data. |
-| **psrc/** | Python reference implementation. See [psrc/README.md](psrc/README.md). |
+| **benchmarks/** | Benchmark programs and [RESULTS.md](benchmarks/RESULTS.md). |
+| **psrc/** | Python reference implementation (legacy). See [psrc/README.md](psrc/README.md). |
 | **csrc/** | C reference implementation. |
 | **docs/** | Documentation (installation, language reference, contributing). |
 | **windows/**, **linux/**, **macos/** | Platform-specific build and packaging scripts. |
-| **scripts/** | Build, test, and benchmark scripts. |
 
 ## Features
 
-- **Dual type system** — Static typing (`abn`, `qoraal`, etc.) and dynamic typing (`door`) in one language
+- **Dual type system** — Static typing (`abn`, `qoraal`, etc.) and dynamic typing (`door`)
 - **Somali-based syntax** — Keywords and concepts in Somali
 - **Modern paradigms** — Functional, procedural, and object-oriented support
 - **Interactive shell** — REPL for experimentation
-- **Cross-platform** — Installers and guides for Windows, Linux, and macOS
+- **Compiled language (in progress)** — Cranelift JIT + LLVM AOT per [COMPILER_PLAN.md](COMPILER_PLAN.md)
 
 ## Example
 
@@ -43,23 +42,19 @@ qor(salaam(magac))
 
 ## Running Soplang
 
-From the project root, build and run the **Rust implementation**:
+**Current runtime:** tree-walking interpreter (Rust). Build and run:
 
 ```bash
-# Build release binary
 cargo build --release
 
-# Run a .sop file
 ./target/release/soplang examples/hello.sop
-
-# Interactive REPL
-./target/release/soplang -i
-
-# One-liner
+./target/release/soplang -i    # REPL
 ./target/release/soplang -c 'qor("Salaan!")'
 ```
 
-Or use the Makefile: `make build`, `make run FILE=examples/hello.sop`, `make shell`, `make test-rust`, `make bench`.
+Or: `make build`, `make run FILE=examples/hello.sop`, `make shell`, `make test-rust`, `make bench`.
+
+**Planned (compiler):** `soplang file.sop` will use Cranelift JIT; `soplang build file.sop` will produce a standalone binary via LLVM. See [COMPILER_PLAN.md](COMPILER_PLAN.md).
 
 ## Benchmark results
 
@@ -74,19 +69,18 @@ The Rust interpreter is benchmarked with [Criterion](https://github.com/bheisler
 | list ops 5k elements | ~2.5 ms |
 | object create 2k | ~1.8 ms |
 
-Full details, pipeline breakdown (lex/parse vs execution), and how to run: **[benchmarks/RESULTS.md](benchmarks/RESULTS.md)**.
+Details and Rust vs Python comparison: [benchmarks/RESULTS.md](benchmarks/RESULTS.md) and [benchmarks/HYPERFINE.md](benchmarks/HYPERFINE.md).
 
-## Legacy / reference — psrc (Python)
+## Legacy — psrc (Python)
 
-The **Python implementation** in `psrc/` remains available for reference and comparison:
+The Python implementation in `psrc/` is kept for reference:
 
 ```bash
 pip install -e .
 python -m psrc examples/hello.sop
-python -m psrc   # interactive shell
 ```
 
-See **[psrc/README.md](psrc/README.md)** for Python setup and tests.
+See [psrc/README.md](psrc/README.md).
 
 ## Documentation
 
@@ -94,6 +88,8 @@ See **[psrc/README.md](psrc/README.md)** for Python setup and tests.
 - [Language reference](docs/language/keywords.md)
 - [Installation](docs/installation.md)
 - [Contributing](docs/CONTRIBUTING.md)
+- [Rust implementation plan (complete)](IMPLEMENTATION_PLAN.md) — Phases 1–7 done
+- [Compiler plan (in progress)](COMPILER_PLAN.md) — Cranelift + LLVM
 
 ## License
 

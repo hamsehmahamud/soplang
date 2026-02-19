@@ -2,6 +2,8 @@
 
 Soplang is the Somali programming language, designed to make programming accessible to Somali speakers worldwide.
 
+**Primary implementation:** Rust (at project root). The Python→Rust migration is complete. We are now building the **compiler** (Cranelift JIT + LLVM AOT); see [COMPILER_PLAN.md](../COMPILER_PLAN.md) in the repo root.
+
 ## Documentation Sections
 
 ### Getting Started
@@ -22,7 +24,8 @@ Soplang is the Somali programming language, designed to make programming accessi
 - [C Implementation](build/README_C.md) - Information about the C implementation
 
 ### Architecture & Internals
-- [Python Implementation Architecture](architecture/PYTHON_ARCHITECTURE.md) - High-level design, pipeline, algorithms, data structures, and design patterns for the Python reference interpreter
+- [Compiler Plan](../COMPILER_PLAN.md) - Cranelift JIT + LLVM AOT (Rust, in progress)
+- [Python Implementation Architecture](architecture/PYTHON_ARCHITECTURE.md) - High-level design of the Python reference implementation (legacy)
 
 ### Testing
 - [Testing Guide](testing/TESTING.md) - How to test Soplang
@@ -39,27 +42,22 @@ To install Soplang, see the [Installation Guide](installation.md) which covers a
 
 ### Running Soplang
 
-To run Soplang after installation, you can:
+The primary way to run Soplang is the **Rust binary** (from project root):
 
 ```bash
+# Build
+cargo build --release
+
 # Run a Soplang program
-soplang examples/hello_world.so
+./target/release/soplang examples/hello.sop
 
-# Start the interactive shell
-soplang
+# Start the interactive shell (REPL)
+./target/release/soplang -i
 ```
 
-If you haven't installed Soplang yet, you can run it directly from the source:
+Or use the Makefile: `make build`, `make run FILE=examples/hello.sop`, `make shell`.
 
-```bash
-python main.py examples/hello_world.so
-```
-
-Or start the interactive shell:
-
-```bash
-python main.py
-```
+**Legacy (Python):** `pip install -e .` then `python -m psrc examples/hello.sop` or `python main.py examples/hello.sop`. See [psrc/README.md](../psrc/README.md).
 
 ## Further Resources
 

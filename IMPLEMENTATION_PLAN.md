@@ -2,6 +2,8 @@
 
 > Step-by-step execution plan for rewriting Soplang in Rust. Each phase is self-contained and produces a verifiable deliverable. The Python implementation in `psrc/` serves as the reference throughout.
 
+**Status: Phases 1–7 complete.** The Rust implementation (lexer, parser, interpreter, stdlib, REPL, CLI, tests, benchmarks) is the primary runtime. The Python→Rust migration is done. **Compiler work** (Cranelift JIT + LLVM AOT) is in **[COMPILER_PLAN.md](COMPILER_PLAN.md)**.
+
 ---
 
 ## Table of Contents
