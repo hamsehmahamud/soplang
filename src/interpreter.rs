@@ -8,6 +8,7 @@ use std::rc::Rc;
 use crate::ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
 use crate::error::{runtime_error, type_error, SoplangError};
 use crate::scope::Env;
+use crate::stdlib;
 use crate::value::{Value, FunctionId};
 
 #[derive(Debug)]
@@ -45,8 +46,14 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
+        let globals = Rc::new(RefCell::new(Env::new()));
+        for (name, val) in stdlib::get_builtin_functions() {
+            globals
+                .borrow_mut()
+                .define(&name, val, TypeAnnotation::Dynamic, false);
+        }
         Self {
-            globals:   Rc::new(RefCell::new(Env::new())),
+            globals,
             functions: Vec::new(),
             classes:   HashMap::new(),
         }
@@ -373,16 +380,6 @@ impl Interpreter {
                     .iter()
                     .map(|a| self.eval_expr(a, Rc::clone(&env)))
                     .collect::<Result<Vec<_>, _>>()?;
-                if name == "qor" {
-                    for (i, a) in evaled.iter().enumerate() {
-                        if i > 0 {
-                            print!(" ");
-                        }
-                        print!("{}", a);
-                    }
-                    println!();
-                    return Ok(Value::Null);
-                }
                 if name == "cusub" {
                     let class_name = match evaled.first() {
                         Some(Value::Str(s)) => s.clone(),
@@ -413,10 +410,10 @@ impl Interpreter {
                     let callee = env.borrow().get(name).ok_or_else(|| {
                         runtime_error(format!("Hawl aan la qeexin: '{}'", name), 0, 0)
                     })?;
-                    if let Value::Function(id) = callee {
-                        self.call_user_function(id.0, &evaled, env)
-                    } else {
-                        Err(runtime_error(format!("'{}' ma aha hawl", name), 0, 0))
+                    match callee {
+                        Value::NativeFunction(f) => f(evaled),
+                        Value::Function(id) => self.call_user_function(id.0, &evaled, env),
+                        _ => Err(runtime_error(format!("'{}' ma aha hawl", name), 0, 0)),
                     }
                 }
             }
@@ -485,6 +482,27 @@ impl Interpreter {
         args: &[Value],
         env: Rc<RefCell<Env>>,
     ) -> Result<Value, SoplangError> {
+        match &receiver {
+            Value::List(lst) => self.dispatch_list_method(Rc::clone(lst), method, args, env),
+            Value::Str(s) => self.dispatch_string_method(s.clone(), method, args),
+            Value::Object(o) => {
+                if o.borrow().get("__class__").is_some() {
+                    self.eval_class_method_call(receiver, method, args, env)
+                } else {
+                    self.dispatch_object_method(Rc::clone(o), method, args)
+                }
+            }
+            _ => Err(runtime_error("Habka waxaa loo yeedhi karaa teed, qoraal, ama walax kaliya", 0, 0)),
+        }
+    }
+
+    fn eval_class_method_call(
+        &mut self,
+        receiver: Value,
+        method: &str,
+        args: &[Value],
+        env: Rc<RefCell<Env>>,
+    ) -> Result<Value, SoplangError> {
         let class_name = match &receiver {
             Value::Object(m) => m
                 .borrow()
@@ -514,6 +532,98 @@ impl Interpreter {
             Ok(Signal::Return(v)) => Ok(v),
             Ok(_) => Ok(Value::Null),
             Err(e) => Err(e),
+        }
+    }
+
+    fn dispatch_list_method(
+        &mut self,
+        lst: Rc<RefCell<Vec<Value>>>,
+        method: &str,
+        args: &[Value],
+        env: Rc<RefCell<Env>>,
+    ) -> Result<Value, SoplangError> {
+        match method {
+            "shaandhee" => {
+                let func = args.first().ok_or_else(|| runtime_error("shaandhee() waa in uu qaato 1 qiimo (hawl)", 0, 0))?;
+                let id = match func {
+                    Value::Function(fid) => fid.0,
+                    _ => return Err(runtime_error("Qiimaha labaad ma ahan hawl", 0, 0)),
+                };
+                let mut out = Vec::new();
+                for item in lst.borrow().iter() {
+                    let r = self.call_user_function(id, &[item.clone()], Rc::clone(&env))?;
+                    if r.is_truthy() {
+                        out.push(item.clone());
+                    }
+                }
+                Ok(Value::List(Rc::new(RefCell::new(out))))
+            }
+            "aaddin" => {
+                let func = args.first().ok_or_else(|| runtime_error("aaddin() waa in uu qaato 1 qiimo (hawl)", 0, 0))?;
+                let id = match func {
+                    Value::Function(fid) => fid.0,
+                    _ => return Err(runtime_error("Qiimaha labaad ma ahan hawl", 0, 0)),
+                };
+                let mut out = Vec::new();
+                for item in lst.borrow().iter() {
+                    let r = self.call_user_function(id, &[item.clone()], Rc::clone(&env))?;
+                    out.push(r);
+                }
+                Ok(Value::List(Rc::new(RefCell::new(out))))
+            }
+            "kasaar" => stdlib::list_kasaar(lst, args),
+            "dherer" => stdlib::list_dherer(lst, args),
+            "kudar" => stdlib::list_kudar(lst, args),
+            "leeyahay" => stdlib::list_leeyahay(lst, args),
+            "nuqul" => stdlib::list_nuqul(lst, args),
+            "nadiifi" => stdlib::list_nadiifi(lst, args),
+            "rog" => stdlib::list_rog(lst, args),
+            "habee" => stdlib::list_habee(lst, args),
+            "jar" => stdlib::list_jar(lst, args),
+            "muuji" => stdlib::list_muuji(lst, args),
+            _ => Err(runtime_error(format!("Habka '{}' ma jiro teedka", method), 0, 0)),
+        }
+    }
+
+    fn dispatch_string_method(
+        &self,
+        s: String,
+        method: &str,
+        args: &[Value],
+    ) -> Result<Value, SoplangError> {
+        match method {
+            "qeybi" => stdlib::string_qeybi(s, args),
+            "leeyahay" => stdlib::string_leeyahay(s, args),
+            "dhamaad" => stdlib::string_dhamaad(s, args),
+            "bilow" => stdlib::string_bilow(s, args),
+            "beddel" => stdlib::string_beddel(s, args),
+            "beddel_dhammaan" => stdlib::string_beddel_dhammaan(s, args),
+            "kudar" => stdlib::string_kudar(s, args),
+            "jar" => stdlib::string_jar(s, args),
+            "xarafaha_weyn" => stdlib::string_xarafaha_weyn(s, args),
+            "xarfaha_yaryar" => stdlib::string_xarfaha_yaryar(s, args),
+            "masax" => stdlib::string_masax(s, args),
+            "raadi" => stdlib::string_raadi(s, args),
+            _ => Err(runtime_error(format!("Habka '{}' ma jiro qoraalka", method), 0, 0)),
+        }
+    }
+
+    fn dispatch_object_method(
+        &self,
+        obj: Rc<RefCell<HashMap<String, Value>>>,
+        method: &str,
+        args: &[Value],
+    ) -> Result<Value, SoplangError> {
+        match method {
+            "fure" => stdlib::object_fure(obj, args),
+            "leeyahay" => stdlib::object_leeyahay(obj, args),
+            "tir" => stdlib::object_tir(obj, args),
+            "kudar" => stdlib::object_kudar(obj, args),
+            "nuqul" => stdlib::object_nuqul(obj, args),
+            "nadiifi" => stdlib::object_nadiifi(obj, args),
+            "qiime" => stdlib::object_qiime(obj, args),
+            "lamaane" => stdlib::object_lamaane(obj, args),
+            _ => Err(runtime_error(format!("Habka '{}' ma jiro walaxa", method), 0, 0)),
         }
     }
 
