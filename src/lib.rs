@@ -69,3 +69,13 @@ pub fn run_source(
     let _ = analyze(&stmts)?;
     interp.run_with_path(stmts, path)
 }
+
+/// Phase 5: build a standalone executable (AOT path).
+pub fn build_source(source: &str, out_path: &Path) -> Result<(), SoplangError> {
+    let tokens = Lexer::new(source).tokenize()?;
+    let stmts = Parser::new(tokens).parse()?;
+    let sym = analyze(&stmts)?;
+    let _hir = HirLowering::lower(&sym, &stmts);
+    let backend = backend::llvm::LlvmBackend::new();
+    backend.build_executable(source, out_path)
+}

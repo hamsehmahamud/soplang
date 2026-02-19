@@ -6,11 +6,17 @@ use std::process;
 
 use clap::Parser as ClapParser;
 
-use soplang::{format_error_with_source, run_source, Interpreter};
+use soplang::{build_source, format_error_with_source, run_source, Interpreter};
 
 #[derive(ClapParser)]
 #[command(name = "soplang", about = "The Somali Programming Language", version)]
 struct Cli {
+    #[arg(long, help = "Build .sop file into standalone executable (AOT)")]
+    build: Option<PathBuf>,
+
+    #[arg(short = 'o', long, help = "Output binary path (used with --build)")]
+    output: Option<PathBuf>,
+
     #[arg(short, long, help = "Execute code snippet and exit")]
     command: Option<String>,
 
@@ -38,6 +44,34 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
+
+    if let Some(path) = &cli.build {
+        let source = match fs::read_to_string(path) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Khalad: Ma akhriyin faylka '{}': {}", path.display(), e);
+                process::exit(1);
+            }
+        };
+        let out = cli.output.clone().unwrap_or_else(|| {
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("a.out")
+                .to_string();
+            PathBuf::from(stem)
+        });
+        match build_source(&source, &out) {
+            Ok(()) => {
+                println!("Waa la dhisay: {}", out.display());
+                return;
+            }
+            Err(e) => {
+                eprintln!("{}", format_error_with_source(&e, Some(&source)));
+                process::exit(1);
+            }
+        }
+    }
 
     let run_then_maybe_shell = |path: PathBuf, source: String| {
         let mut interp = Interpreter::new();
