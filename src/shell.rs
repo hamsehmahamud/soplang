@@ -3,10 +3,7 @@
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
-use crate::error::format_error_with_source;
-use crate::interpreter::Interpreter;
-use crate::lexer::Lexer;
-use crate::parser::Parser;
+use soplang::{format_error_with_source, Interpreter, Lexer, Parser};
 
 const PROMPT: &str = "soplang> ";
 

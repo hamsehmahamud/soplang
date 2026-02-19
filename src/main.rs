@@ -1,24 +1,12 @@
-mod ast;
-mod error;
-mod interpreter;
-mod lexer;
-mod parser;
-mod scope;
 mod shell;
-mod stdlib;
-mod token;
-mod value;
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process;
 
 use clap::Parser as ClapParser;
-use interpreter::Interpreter;
-use lexer::Lexer;
-use parser::Parser;
 
-use crate::error::format_error_with_source;
+use soplang::{format_error_with_source, run_source, Interpreter};
 
 #[derive(ClapParser)]
 #[command(name = "soplang", about = "The Somali Programming Language", version)]
@@ -40,23 +28,6 @@ struct Cli {
 
     #[arg(long, help = "Print AST instead of executing")]
     ast: bool,
-}
-
-fn run_source(
-    interp: &mut Interpreter,
-    source: &str,
-    path: Option<&Path>,
-    print_ast: bool,
-) -> Result<(), crate::error::SoplangError> {
-    let tokens = Lexer::new(source).tokenize()?;
-    let stmts = Parser::new(tokens).parse()?;
-    if print_ast {
-        for s in &stmts {
-            print!("{}", s);
-        }
-        return Ok(());
-    }
-    interp.run_with_path(stmts, path)
 }
 
 fn main() {
