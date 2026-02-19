@@ -28,6 +28,12 @@ struct Cli {
 
     #[arg(long, help = "Print AST instead of executing")]
     ast: bool,
+
+    #[arg(long, help = "Dump HIR (High-Level IR) instead of executing")]
+    hir: bool,
+
+    #[arg(long, help = "Run via Cranelift JIT (compiled) instead of interpreter")]
+    jit: bool,
 }
 
 fn main() {
@@ -35,7 +41,7 @@ fn main() {
 
     let run_then_maybe_shell = |path: PathBuf, source: String| {
         let mut interp = Interpreter::new();
-        match run_source(&mut interp, &source, Some(&path), cli.ast) {
+        match run_source(&mut interp, &source, Some(&path), cli.ast, cli.hir, cli.jit) {
             Ok(()) => {
                 if cli.interactive {
                     run_shell();
@@ -50,7 +56,7 @@ fn main() {
 
     if let Some(code) = &cli.command {
         let mut interp = Interpreter::new();
-        match run_source(&mut interp, code, None, false) {
+        match run_source(&mut interp, code, None, false, false, false) {
             Ok(()) => process::exit(0),
             Err(e) => {
                 eprintln!("{}", format_error_with_source(&e, Some(code)));
@@ -97,7 +103,7 @@ fn main() {
             }
         };
         let mut interp = Interpreter::new();
-        match run_source(&mut interp, &source, Some(path.as_path()), cli.ast) {
+        match run_source(&mut interp, &source, Some(path.as_path()), cli.ast, cli.hir, cli.jit) {
             Ok(()) => {
                 if cli.interactive {
                     run_shell();

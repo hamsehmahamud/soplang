@@ -190,7 +190,7 @@ pub fn value_to_string(v: &Value) -> String {
             let m = obj.borrow();
             let mut pairs: Vec<_> = m
                 .iter()
-                .map(|(k, val)| format!("'{}': {}", k, value_to_string(val)))
+                .map(|(k, val)| format!("{}: {}", k, value_to_string(val)))
                 .collect();
             pairs.sort();
             format!("{{{}}}", pairs.join(", "))

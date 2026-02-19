@@ -36,6 +36,8 @@ pub struct FunctionMeta {
     pub param_slots: Vec<usize>,
     pub local_count: usize,
     pub captures:    Vec<String>,
+    /// Variable name -> VarInfo for this function's scope (params + locals).
+    pub scope_vars:  HashMap<String, VarInfo>,
 }
 
 #[derive(Debug, Clone)]
@@ -87,7 +89,7 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
         }
         Stmt::Assign { target, value, line, col } => {
             if let Expr::Identifier(name) = target {
-                resolve_name(sym, &name).ok_or_else(|| {
+                resolve_name(sym, &name, None).ok_or_else(|| {
                     type_error(
                         format!("Magaca '{}' ma aqoonsan", name),
                         *line,
@@ -101,7 +103,6 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
             analyze_expr(value, sym)?;
         }
         Stmt::FuncDef { name, params, body } => {
-            // New scope for function body
             let mut func_scope = Scope::default();
             let param_slots: Vec<usize> = (0..params.len()).collect();
             for (i, p) in params.iter().enumerate() {
@@ -120,10 +121,11 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
             let scope = sym.scopes.pop().unwrap();
             let local_count = scope.vars.len();
             sym.functions.push(FunctionMeta {
-                name:   name.clone(),
+                name:       name.clone(),
                 param_slots,
                 local_count,
-                captures: Vec::new(), // TODO: closure analysis
+                captures:   Vec::new(),
+                scope_vars: scope.vars,
             });
         }
         Stmt::ClassDef { name, parent, body } => {
@@ -165,7 +167,21 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                 analyze_block(d, sym)?;
             }
         }
-        Stmt::For { start, end, step, body, .. } => {
+        Stmt::For { var, start, end, step, body } => {
+            // Loop variable is in scope for the body
+            let scope = sym.scopes.last_mut().unwrap();
+            if !scope.vars.contains_key(var) {
+                let slot = scope.vars.len();
+                scope.vars.insert(
+                    var.clone(),
+                    VarInfo {
+                        slot,
+                        type_ann: TypeAnnotation::Dynamic,
+                        is_const: false,
+                        is_captured: false,
+                    },
+                );
+            }
             analyze_expr(start, sym)?;
             analyze_expr(end, sym)?;
             if let Some(s) = step {
@@ -242,8 +258,17 @@ fn analyze_assign_target(target: &Expr, sym: &mut SymbolTable) -> Result<(), Sop
     Ok(())
 }
 
-/// Resolve a name to its VarInfo (from current or outer scope). Returns None if not found.
-pub fn resolve_name(sym: &SymbolTable, name: &str) -> Option<VarInfo> {
+/// Resolve a name to its VarInfo. If func_scope is given (for function body), check it first.
+pub fn resolve_name(
+    sym: &SymbolTable,
+    name: &str,
+    func_scope: Option<&HashMap<String, VarInfo>>,
+) -> Option<VarInfo> {
+    if let Some(scope) = func_scope {
+        if let Some(info) = scope.get(name) {
+            return Some(info.clone());
+        }
+    }
     for scope in sym.scopes.iter().rev() {
         if let Some(info) = scope.vars.get(name) {
             return Some(info.clone());

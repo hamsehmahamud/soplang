@@ -6,6 +6,11 @@ edition = "2021"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 colored = "2"
+cranelift = "0.125"
+cranelift-frontend = "0.125"
+cranelift-jit = "0.125"
+cranelift-module = "0.125"
+cranelift-native = "0.125"
 rustyline = "14"
 thiserror = "1.0"
 

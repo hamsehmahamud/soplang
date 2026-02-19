@@ -23,5 +23,5 @@ Original object:
 \nUsing values with other functions:
   All values are strings: run
 \nConverting all values to strings:
-  String values: [{'magaalo': Muqdisho, 'xaafad': Hodan}, 21, [buugag, ciyaaro, safar, daawasho], Ayaan, macallin, been]
+  String values: [{magaalo: Muqdisho, xaafad: Hodan}, 21, [buugag, ciyaaro, safar, daawasho], Ayaan, macallin, been]
 \nTest completed: walax.qiime() returns all values from an object

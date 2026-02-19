@@ -18,7 +18,7 @@ Testing walax.lamaane() (object entries):
   - active (bool): run
   - data (teed): [1, 2, 3]
   - name (qoraal): Complex
-  - nested (walax): {'a': 1, 'b': 2}
+  - nested (walax): {a: 1, b: 2}
 \nUpdating values through entries:
   Updated age: 22
   Updated object: {da: 22, magac: Ayaan, shaqo: macallin, waa_arday: been}
