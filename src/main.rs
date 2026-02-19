@@ -9,6 +9,7 @@ mod value;
 
 use std::env;
 use std::fs;
+use std::path::Path;
 use std::process;
 
 use interpreter::Interpreter;
@@ -63,7 +64,7 @@ fn main() {
             }
         };
         let mut interp = Interpreter::new();
-        if let Err(e) = interp.run(stmts) {
+        if let Err(e) = interp.run_with_path(stmts, Some(Path::new(path))) {
             eprintln!("{}", e);
             process::exit(1);
         }

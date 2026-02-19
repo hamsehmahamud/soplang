@@ -5,6 +5,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
+/// Opaque function reference (index into Interpreter's function table).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FunctionId(pub usize);
+
 #[derive(Debug, Clone)]
 pub enum Value {
     Int(i64),
@@ -13,6 +17,7 @@ pub enum Value {
     Bool(bool),
     List(Rc<RefCell<Vec<Value>>>),
     Object(Rc<RefCell<HashMap<String, Value>>>),
+    Function(FunctionId),
     Null,
 }
 
@@ -26,6 +31,7 @@ impl PartialEq for Value {
             (Value::Null, Value::Null) => true,
             (Value::List(a), Value::List(b)) => Rc::ptr_eq(a, b) || *a.borrow() == *b.borrow(),
             (Value::Object(a), Value::Object(b)) => Rc::ptr_eq(a, b) || *a.borrow() == *b.borrow(),
+            (Value::Function(a), Value::Function(b)) => a == b,
             _ => false,
         }
     }
@@ -42,6 +48,7 @@ impl Value {
             Value::Bool(_) => "bool",
             Value::List(_) => "teed",
             Value::Object(_) => "walax",
+            Value::Function(_) => "hawl",
             Value::Null => "null",
         }
     }
@@ -56,7 +63,14 @@ impl Value {
             Value::Str(s) => !s.is_empty(),
             Value::List(l) => !l.borrow().is_empty(),
             Value::Object(o) => !o.borrow().is_empty(),
+            Value::Function(_) => true,
         }
+    }
+}
+
+impl fmt::Display for FunctionId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "hawl#{}", self.0)
     }
 }
 
@@ -96,6 +110,7 @@ impl fmt::Display for Value {
                 }
                 write!(f, "}}")
             }
+            Value::Function(id) => write!(f, "{}", id),
         }
     }
 }
