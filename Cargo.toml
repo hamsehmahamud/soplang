@@ -8,3 +8,10 @@ clap = { version = "4", features = ["derive"] }
 colored = "2"
 rustyline = "14"
 thiserror = "1.0"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "soplang_bench"
+harness = false

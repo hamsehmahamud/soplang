@@ -1,0 +1,8 @@
+// Benchmark: nested loop — stresses interpreter dispatch and arithmetic
+door count = 0
+kuceli (i 0 ilaa 201) {
+    kuceli (j 0 ilaa 201) {
+        count = count + 1
+    }
+}
+qor(count)

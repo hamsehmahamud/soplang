@@ -1,0 +1,10 @@
+// Benchmark: list push + iteration — stresses list allocation and traversal
+door lst = []
+kuceli (i 1 ilaa 5001) {
+    lst.kudar(i)
+}
+door total = 0
+kuceli (i 0 ilaa 5000) {
+    total = total + lst[i]
+}
+qor(total)

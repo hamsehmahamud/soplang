@@ -1,0 +1,7 @@
+// Benchmark: object creation and property access — stresses object allocation
+door total = 0
+kuceli (i 0 ilaa 2001) {
+    door obj = { x: i, y: i * 2 }
+    total = total + obj.x + obj.y
+}
+qor(total)

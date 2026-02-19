@@ -1,0 +1,10 @@
+// Benchmark: recursive Fibonacci — stresses function call overhead + recursion
+hawl fib(n) {
+    haddii (n < 2) {
+        celi n
+    }
+    celi fib(n - 1) + fib(n - 2)
+}
+
+door result = fib(25)
+qor(result)

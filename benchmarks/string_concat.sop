@@ -1,0 +1,6 @@
+// Benchmark: string concatenation in a loop
+door s = ""
+kuceli (i 1 ilaa 1001) {
+    s = s + "a"
+}
+qor(dherer(s))

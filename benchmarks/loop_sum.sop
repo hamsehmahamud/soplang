@@ -1,0 +1,6 @@
+// Benchmark: tight loop — stresses loop + arithmetic performance
+door sum = 0
+kuceli (i 1 ilaa 100001) {
+    sum = sum + i
+}
+qor(sum)
