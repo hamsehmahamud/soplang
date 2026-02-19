@@ -35,7 +35,7 @@ impl Shell {
     }
 
     fn execute(&mut self, source: &str) {
-        if let Err(e) = run_source(source, None, false, false, true) {
+        if let Err(e) = run_source(source, None, false, false, false) {
             eprintln!("{}", format_error_with_source(&e, Some(source)));
         }
     }

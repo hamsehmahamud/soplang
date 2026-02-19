@@ -22,6 +22,8 @@ impl LlvmBackend {
         &self,
         source: &str,
         out_path: &Path,
+        opt_level: u8,
+        strict: bool,
     ) -> Result<(), SoplangError> {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let now = SystemTime::now()
@@ -43,16 +45,19 @@ impl LlvmBackend {
 
         let escaped_source = format!("{source:?}");
         let runner = format!(
-            "use std::process;\nuse soplang::{{format_error_with_source, run_source}};\n\nconst SOURCE: &str = {src};\n\nfn main() {{\n    match run_source(SOURCE, None, false, false, true) {{\n        Ok(()) => {{}}\n        Err(e) => {{\n            eprintln!(\"{{}}\", format_error_with_source(&e, Some(SOURCE)));\n            process::exit(1);\n        }}\n    }}\n}}\n",
-            src = escaped_source
+            "use std::process;\nuse soplang::{{format_error_with_source, run_source}};\n\nconst SOURCE: &str = {src};\n\nfn main() {{\n    match run_source(SOURCE, None, false, false, {strict}) {{\n        Ok(()) => {{}}\n        Err(e) => {{\n            eprintln!(\"{{}}\", format_error_with_source(&e, Some(SOURCE)));\n            process::exit(1);\n        }}\n    }}\n}}\n",
+            src = escaped_source,
+            strict = if strict { "true" } else { "false" }
         );
         fs::write(src_dir.join("main.rs"), runner).map_err(|e| runtime_error(e.to_string(), 0, 0))?;
 
-        let status = Command::new("cargo")
-            .arg("build")
-            .arg("--release")
-            .arg("--manifest-path")
-            .arg(temp_root.join("Cargo.toml"))
+        let mut cmd = Command::new("cargo");
+        cmd.arg("build").arg("--manifest-path").arg(temp_root.join("Cargo.toml"));
+        if opt_level > 0 {
+            cmd.arg("--release")
+                .env("CARGO_PROFILE_RELEASE_OPT_LEVEL", format!("{}", opt_level.min(3)));
+        }
+        let status = cmd
             .status()
             .map_err(|e| runtime_error(format!("AOT build failed to start: {}", e), 0, 0))?;
         if !status.success() {
@@ -64,7 +69,8 @@ impl LlvmBackend {
         } else {
             pkg_name.clone()
         };
-        let built = temp_root.join("target").join("release").join(exe_name);
+        let profile = if opt_level == 0 { "debug" } else { "release" };
+        let built = temp_root.join("target").join(profile).join(exe_name);
         if !built.exists() {
             return Err(runtime_error("AOT binary not found after build", 0, 0));
         }

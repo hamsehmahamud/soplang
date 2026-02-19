@@ -17,6 +17,9 @@ struct Cli {
     #[arg(short = 'o', long, help = "Output binary path (used with --build)")]
     output: Option<PathBuf>,
 
+    #[arg(long, default_value_t = 2, help = "AOT optimization level: 0..3 (used with --build)")]
+    opt_level: u8,
+
     #[arg(short, long, help = "Execute code snippet and exit")]
     command: Option<String>,
 
@@ -38,8 +41,8 @@ struct Cli {
     #[arg(long, help = "Dump HIR (High-Level IR) instead of executing")]
     hir: bool,
 
-    #[arg(long, help = "Run via Cranelift JIT (compiled) instead of interpreter")]
-    jit: bool,
+    #[arg(long, help = "Enable strict static type mode")]
+    strict: bool,
 }
 
 fn main() {
@@ -61,7 +64,7 @@ fn main() {
                 .to_string();
             PathBuf::from(stem)
         });
-        match build_source(&source, &out) {
+        match build_source(&source, &out, cli.opt_level, cli.strict) {
             Ok(()) => {
                 println!("Waa la dhisay: {}", out.display());
                 return;
@@ -74,7 +77,7 @@ fn main() {
     }
 
     let run_then_maybe_shell = |path: PathBuf, source: String| {
-        match run_source(&source, Some(&path), cli.ast, cli.hir, cli.jit) {
+        match run_source(&source, Some(&path), cli.ast, cli.hir, cli.strict) {
             Ok(()) => {
                 if cli.interactive {
                     run_shell();
@@ -88,7 +91,7 @@ fn main() {
     };
 
     if let Some(code) = &cli.command {
-        match run_source(code, None, false, false, false) {
+        match run_source(code, None, false, false, cli.strict) {
             Ok(()) => process::exit(0),
             Err(e) => {
                 eprintln!("{}", format_error_with_source(&e, Some(code)));
@@ -134,7 +137,7 @@ fn main() {
                 process::exit(1);
             }
         };
-        match run_source(&source, Some(path.as_path()), cli.ast, cli.hir, cli.jit) {
+        match run_source(&source, Some(path.as_path()), cli.ast, cli.hir, cli.strict) {
             Ok(()) => {
                 if cli.interactive {
                     run_shell();

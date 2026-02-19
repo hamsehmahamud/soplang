@@ -134,7 +134,8 @@ impl fmt::Display for Expr {
 /// Function parameter (name only for now).
 #[derive(Debug, Clone)]
 pub struct Param {
-    pub name: String,
+    pub name:     String,
+    pub type_ann: TypeAnnotation,
 }
 
 /// Statements (side effects; optional line for errors).
@@ -159,9 +160,10 @@ pub enum Stmt {
         col:    usize,
     },
     FuncDef {
-        name:   String,
-        params: Vec<Param>,
-        body:   Vec<Stmt>,
+        name:       String,
+        params:     Vec<Param>,
+        return_ann: TypeAnnotation,
+        body:       Vec<Stmt>,
     },
     ClassDef {
         name:   String,
@@ -223,15 +225,33 @@ impl Stmt {
                 writeln!(f, "{}{} {} = {};", pad, ty, name, value)
             }
             Stmt::Assign { target, value, .. } => writeln!(f, "{}{} = {};", pad, target, value),
-            Stmt::FuncDef { name, params, body } => {
+            Stmt::FuncDef { name, params, return_ann, body } => {
                 write!(f, "{}hawl {}(", pad, name)?;
                 for (i, p) in params.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", p.name)?;
+                    let param_ty = match p.type_ann {
+                        TypeAnnotation::Dynamic => "door",
+                        TypeAnnotation::Abn => "abn",
+                        TypeAnnotation::Jajab => "jajab",
+                        TypeAnnotation::Qoraal => "qoraal",
+                        TypeAnnotation::Bool => "bool",
+                        TypeAnnotation::Teed => "teed",
+                        TypeAnnotation::Walax => "walax",
+                    };
+                    write!(f, "{} {}", param_ty, p.name)?;
                 }
-                writeln!(f, ") {{")?;
+                let ret_ty = match return_ann {
+                    TypeAnnotation::Dynamic => "door",
+                    TypeAnnotation::Abn => "abn",
+                    TypeAnnotation::Jajab => "jajab",
+                    TypeAnnotation::Qoraal => "qoraal",
+                    TypeAnnotation::Bool => "bool",
+                    TypeAnnotation::Teed => "teed",
+                    TypeAnnotation::Walax => "walax",
+                };
+                writeln!(f, ") : {} {{", ret_ty)?;
                 for s in body {
                     s.fmt_with_depth(f, depth + 1)?;
                 }

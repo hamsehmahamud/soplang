@@ -200,20 +200,61 @@ impl Parser {
         self.expect(TokenType::LParen)?;
         let mut params = Vec::new();
         while !self.check(TokenType::RParen) {
+            let type_ann = if matches!(
+                self.peek().kind,
+                TokenType::Abn
+                    | TokenType::Jajab
+                    | TokenType::Qoraal
+                    | TokenType::Bool
+                    | TokenType::Teed
+                    | TokenType::Walax
+            ) {
+                let ann = token_to_type_ann(&self.peek().kind);
+                self.advance();
+                ann
+            } else {
+                TypeAnnotation::Dynamic
+            };
             params.push(Param {
                 name: self.expect_identifier()?,
+                type_ann,
             });
             if !self.check(TokenType::RParen) {
                 self.expect(TokenType::Comma)?;
             }
         }
         self.expect(TokenType::RParen)?;
+        let return_ann = if self.check(TokenType::Colon) {
+            self.advance();
+            if matches!(
+                self.peek().kind,
+                TokenType::Abn
+                    | TokenType::Jajab
+                    | TokenType::Qoraal
+                    | TokenType::Bool
+                    | TokenType::Teed
+                    | TokenType::Walax
+            ) {
+                let ann = token_to_type_ann(&self.peek().kind);
+                self.advance();
+                ann
+            } else {
+                return Err(parser_error(
+                    "Waxaa la filayay nooca celi (abn/jajab/qoraal/bool/teed/walax)",
+                    self.peek().line,
+                    self.peek().col,
+                ));
+            }
+        } else {
+            TypeAnnotation::Dynamic
+        };
         self.expect(TokenType::LBrace)?;
         let body = self.parse_block_stmts()?;
         self.expect(TokenType::RBrace)?;
         Ok(Stmt::FuncDef {
             name,
             params,
+            return_ann,
             body,
         })
     }

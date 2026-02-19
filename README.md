@@ -4,13 +4,13 @@
 
 Soplang is a programming language with syntax inspired by Somali, making programming more accessible to Somali speakers. It combines static and dynamic typing in one language with a focus on clarity and ease of use.
 
-**The primary implementation is in Rust.** The Python→Rust migration is complete: you get a single native binary (`soplang`) that runs `.sop` files and provides an interactive REPL. We are now **building the compiler**: Cranelift JIT (for fast run) and LLVM AOT (for standalone binaries). See [COMPILER_PLAN.md](COMPILER_PLAN.md).
+**The primary implementation is in Rust.** The Python→Rust migration is complete. Soplang now runs through a compiled pipeline by default: Cranelift JIT for `run` and an AOT build path for standalone binaries. See [COMPILER_PLAN.md](COMPILER_PLAN.md).
 
 ## Project structure
 
 | Path | Description |
 |------|-------------|
-| **src/** | Rust implementation: lexer, parser, **interpreter** (current runtime), stdlib. **Compiler** (semantic, HIR, Cranelift, LLVM) in progress per [COMPILER_PLAN.md](COMPILER_PLAN.md). |
+| **src/** | Rust implementation: lexer, parser, semantic, HIR, runtime, Cranelift JIT, and AOT build backend. |
 | **examples/** | Soplang example programs (`.sop` files). |
 | **benchmarks/** | Benchmark programs and [RESULTS.md](benchmarks/RESULTS.md). |
 | **psrc/** | Python reference implementation (legacy). See [psrc/README.md](psrc/README.md). |
@@ -23,8 +23,8 @@ Soplang is a programming language with syntax inspired by Somali, making program
 - **Dual type system** — Static typing (`abn`, `qoraal`, etc.) and dynamic typing (`door`)
 - **Somali-based syntax** — Keywords and concepts in Somali
 - **Modern paradigms** — Functional, procedural, and object-oriented support
-- **Interactive shell** — REPL for experimentation
-- **Compiled language (in progress)** — Cranelift JIT + LLVM AOT per [COMPILER_PLAN.md](COMPILER_PLAN.md)
+- **Interactive shell** — REPL powered by the compiled JIT pipeline
+- **Compiled execution** — Cranelift JIT for running files, AOT build for standalone binaries
 
 ## Example
 
@@ -42,23 +42,34 @@ qor(salaam(magac))
 
 ## Running Soplang
 
-**Current runtime:** tree-walking interpreter (Rust). Build and run:
+Build and run:
 
 ```bash
 cargo build --release
 
-./target/release/soplang examples/hello.sop
+./target/release/soplang examples/hello.sop        # JIT run
 ./target/release/soplang -i    # REPL
 ./target/release/soplang -c 'qor("Salaan!")'
+./target/release/soplang --build examples/hello.sop -o hello_aot
+./hello_aot
 ```
 
 Or: `make build`, `make run FILE=examples/hello.sop`, `make shell`, `make test-rust`, `make bench`.
 
-**Planned (compiler):** `soplang file.sop` will use Cranelift JIT; `soplang build file.sop` will produce a standalone binary via LLVM. See [COMPILER_PLAN.md](COMPILER_PLAN.md).
+### CLI notes
+
+- `soplang <file.sop>`: run via Cranelift JIT.
+- `soplang --build <file.sop> -o <out>`: build a standalone native binary.
+- `soplang --build ... --opt-level 0..3`: tune AOT optimization level.
+- `soplang --strict`: enable stricter static typing checks.
+
+### AOT backend note
+
+Current AOT backend is implemented by generating a temporary Rust runner and compiling it to a native executable. This is the supported strategy for now; it can be replaced later with a direct LLVM IR (`inkwell`) backend.
 
 ## Benchmark results
 
-The Rust interpreter is benchmarked with [Criterion](https://github.com/bheisler/criterion.rs). Summary (release build):
+Runtime performance is benchmarked with [Criterion](https://github.com/bheisler/criterion.rs). Summary (release build):
 
 | Benchmark | Mean time |
 |-----------|-----------|

@@ -34,6 +34,8 @@ pub struct VarInfo {
 pub struct FunctionMeta {
     pub name:        String,
     pub param_slots: Vec<usize>,
+    pub param_types: Vec<TypeAnnotation>,
+    pub return_ann:  TypeAnnotation,
     pub local_count: usize,
     pub captures:    Vec<String>,
     /// Variable name -> VarInfo for this function's scope (params + locals).
@@ -50,22 +52,64 @@ pub struct ClassMeta {
 
 /// Run semantic analysis on the AST. Returns a symbol table or an error.
 pub fn analyze(stmts: &[Stmt]) -> Result<SymbolTable, SoplangError> {
+    analyze_with_options(stmts, AnalyzeOptions::default())
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AnalyzeOptions {
+    pub strict: bool,
+}
+
+#[derive(Debug, Clone)]
+struct FunctionSig {
+    params: Vec<TypeAnnotation>,
+    ret:    TypeAnnotation,
+}
+
+/// Run semantic analysis with options (e.g. strict typing mode).
+pub fn analyze_with_options(
+    stmts: &[Stmt],
+    opts: AnalyzeOptions,
+) -> Result<SymbolTable, SoplangError> {
     let mut sym = SymbolTable::default();
     sym.scopes.push(Scope::default()); // global scope
-    analyze_block(stmts, &mut sym)?;
+    let fn_sigs = collect_function_sigs(stmts);
+    analyze_block(stmts, &mut sym, &opts, &fn_sigs, None)?;
     Ok(sym)
 }
 
-fn analyze_block(stmts: &[Stmt], sym: &mut SymbolTable) -> Result<(), SoplangError> {
+fn analyze_block(
+    stmts: &[Stmt],
+    sym: &mut SymbolTable,
+    opts: &AnalyzeOptions,
+    fn_sigs: &HashMap<String, FunctionSig>,
+    current_return: Option<TypeAnnotation>,
+) -> Result<(), SoplangError> {
     for s in stmts {
-        analyze_stmt(s, sym)?;
+        analyze_stmt(s, sym, opts, fn_sigs, current_return)?;
     }
     Ok(())
 }
 
-fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> {
+fn analyze_stmt(
+    stmt: &Stmt,
+    sym: &mut SymbolTable,
+    opts: &AnalyzeOptions,
+    fn_sigs: &HashMap<String, FunctionSig>,
+    current_return: Option<TypeAnnotation>,
+) -> Result<(), SoplangError> {
     match stmt {
         Stmt::VarDecl { name, type_ann, is_const, value, line, col } => {
+            if opts.strict && *type_ann == TypeAnnotation::Dynamic {
+                return Err(type_error_ex(
+                    format!("'{}' waa dynamic laakiin strict mode waa shidan", name),
+                    *line,
+                    *col,
+                    ErrorMeta::default()
+                        .with_code(codes::E022_TYPE_MISMATCH)
+                        .with_hint("Strict mode: isticmaal nooc cad sida abn/jajab/qoraal/bool/teed/walax."),
+                ));
+            }
             let scope = sym.scopes.last_mut().unwrap();
             if scope.vars.contains_key(name) {
                 return Err(type_error_ex(
@@ -89,7 +133,7 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
             );
             // Phase 2: basic static type check for initializer when we can infer a type.
             if *type_ann != TypeAnnotation::Dynamic {
-                if let Some(expr_ty) = infer_expr_type(value, sym) {
+                if let Some(expr_ty) = infer_expr_type(value, sym, fn_sigs) {
                     if !is_type_compatible(*type_ann, expr_ty) {
                         return Err(type_mismatch_error(
                             name,
@@ -101,7 +145,7 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                     }
                 }
             }
-            analyze_expr(value, sym)?;
+            analyze_expr(value, sym, fn_sigs)?;
         }
         Stmt::Assign { target, value, line, col } => {
             if let Expr::Identifier(name) = target {
@@ -126,7 +170,7 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                     ));
                 }
                 if var.type_ann != TypeAnnotation::Dynamic {
-                    if let Some(expr_ty) = infer_expr_type(value, sym) {
+                    if let Some(expr_ty) = infer_expr_type(value, sym, fn_sigs) {
                         if !is_type_compatible(var.type_ann, expr_ty) {
                             return Err(type_mismatch_error(
                                 name,
@@ -140,11 +184,33 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                 }
             } else {
                 // Index or Property: resolve subexpressions only
-                analyze_assign_target(target, sym)?;
+                analyze_assign_target(target, sym, fn_sigs)?;
             }
-            analyze_expr(value, sym)?;
+            analyze_expr(value, sym, fn_sigs)?;
         }
-        Stmt::FuncDef { name, params, body } => {
+        Stmt::FuncDef { name, params, return_ann, body } => {
+            if opts.strict {
+                if *return_ann == TypeAnnotation::Dynamic {
+                    return Err(type_error_ex(
+                        format!("hawl '{}' ma leh nooc celi cad", name),
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E022_TYPE_MISMATCH)
+                            .with_hint("Strict mode: qor nooca celi sida ') : abn {' ama ') : qoraal {'."),
+                    ));
+                }
+                if params.iter().any(|p| p.type_ann == TypeAnnotation::Dynamic) {
+                    return Err(type_error_ex(
+                        format!("hawl '{}' waxay leedahay param dynamic strict mode", name),
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E022_TYPE_MISMATCH)
+                            .with_hint("Strict mode: qor nooca param kasta, tusaale: hawl f(abn x, qoraal y)."),
+                    ));
+                }
+            }
             let mut func_scope = Scope::default();
             let param_slots: Vec<usize> = (0..params.len()).collect();
             for (i, p) in params.iter().enumerate() {
@@ -152,19 +218,21 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                     p.name.clone(),
                     VarInfo {
                         slot: i,
-                        type_ann: TypeAnnotation::Dynamic,
+                        type_ann: p.type_ann,
                         is_const: false,
                         is_captured: false,
                     },
                 );
             }
             sym.scopes.push(func_scope);
-            analyze_block(body, sym)?;
+            analyze_block(body, sym, opts, fn_sigs, Some(*return_ann))?;
             let scope = sym.scopes.pop().unwrap();
             let local_count = scope.vars.len();
             sym.functions.push(FunctionMeta {
                 name:       name.clone(),
                 param_slots,
+                param_types: params.iter().map(|p| p.type_ann).collect(),
+                return_ann: *return_ann,
                 local_count,
                 captures:   Vec::new(),
                 scope_vars: scope.vars,
@@ -186,27 +254,27 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                 },
             );
             // Recurse into class body (method bodies get their own scope via FuncDef)
-            analyze_block(body, sym)?;
+            analyze_block(body, sym, opts, fn_sigs, current_return)?;
         }
         Stmt::If { cond, then_body, elseifs, else_body } => {
-            analyze_expr(cond, sym)?;
-            analyze_block(then_body, sym)?;
+            analyze_expr(cond, sym, fn_sigs)?;
+            analyze_block(then_body, sym, opts, fn_sigs, current_return)?;
             for (c, b) in elseifs {
-                analyze_expr(c, sym)?;
-                analyze_block(b, sym)?;
+                analyze_expr(c, sym, fn_sigs)?;
+                analyze_block(b, sym, opts, fn_sigs, current_return)?;
             }
             if let Some(eb) = else_body {
-                analyze_block(eb, sym)?;
+                analyze_block(eb, sym, opts, fn_sigs, current_return)?;
             }
         }
         Stmt::Switch { expr, cases, default } => {
-            analyze_expr(expr, sym)?;
+            analyze_expr(expr, sym, fn_sigs)?;
             for (v, body) in cases {
-                analyze_expr(v, sym)?;
-                analyze_block(body, sym)?;
+                analyze_expr(v, sym, fn_sigs)?;
+                analyze_block(body, sym, opts, fn_sigs, current_return)?;
             }
             if let Some(d) = default {
-                analyze_block(d, sym)?;
+                analyze_block(d, sym, opts, fn_sigs, current_return)?;
             }
         }
         Stmt::For { var, start, end, step, body } => {
@@ -224,64 +292,139 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                     },
                 );
             }
-            analyze_expr(start, sym)?;
-            analyze_expr(end, sym)?;
+            analyze_expr(start, sym, fn_sigs)?;
+            analyze_expr(end, sym, fn_sigs)?;
             if let Some(s) = step {
-                analyze_expr(s, sym)?;
+                analyze_expr(s, sym, fn_sigs)?;
             }
-            analyze_block(body, sym)?;
+            analyze_block(body, sym, opts, fn_sigs, current_return)?;
         }
         Stmt::While { cond, body } => {
-            analyze_expr(cond, sym)?;
-            analyze_block(body, sym)?;
+            analyze_expr(cond, sym, fn_sigs)?;
+            analyze_block(body, sym, opts, fn_sigs, current_return)?;
         }
-        Stmt::Return(Some(e)) => analyze_expr(e, sym)?,
-        Stmt::Return(None) => {}
+        Stmt::Return(Some(e)) => {
+            analyze_expr(e, sym, fn_sigs)?;
+            if let Some(ret_ann) = current_return {
+                if ret_ann != TypeAnnotation::Dynamic {
+                    if let Some(expr_ty) = infer_expr_type(e, sym, fn_sigs) {
+                        if !is_type_compatible(ret_ann, expr_ty) {
+                            return Err(type_error_ex(
+                                format!("nooca celi '{}' ma waafaqsana nooca hawsha '{}'", ty_str(expr_ty), ty_str(ret_ann)),
+                                0,
+                                0,
+                                ErrorMeta::default()
+                                    .with_code(codes::E022_TYPE_MISMATCH)
+                                    .with_hint("Hubi in 'celi' uu la mid yahay nooca lagu qoray hawsha."),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        Stmt::Return(None) => {
+            if let Some(ret_ann) = current_return {
+                if ret_ann != TypeAnnotation::Dynamic {
+                    return Err(type_error_ex(
+                        format!("hawshu waxay rabtaa '{}' laakiin celi qiimo ma leh", ty_str(ret_ann)),
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E022_TYPE_MISMATCH)
+                            .with_hint("Ku celi qiime sax ah ama beddel nooca celi ee hawsha."),
+                    ));
+                }
+            }
+        }
         Stmt::Break | Stmt::Continue => {}
         Stmt::TryCatch { try_body, catch_body, .. } => {
-            analyze_block(try_body, sym)?;
-            analyze_block(catch_body, sym)?;
+            analyze_block(try_body, sym, opts, fn_sigs, current_return)?;
+            analyze_block(catch_body, sym, opts, fn_sigs, current_return)?;
         }
         Stmt::Import(_) => {}
-        Stmt::Block(stmts) => analyze_block(stmts, sym)?,
-        Stmt::Expr(e) => analyze_expr(e, sym)?,
+        Stmt::Block(stmts) => analyze_block(stmts, sym, opts, fn_sigs, current_return)?,
+        Stmt::Expr(e) => analyze_expr(e, sym, fn_sigs)?,
     }
     Ok(())
 }
 
-fn analyze_expr(expr: &Expr, sym: &mut SymbolTable) -> Result<(), SoplangError> {
+fn analyze_expr(
+    expr: &Expr,
+    sym: &mut SymbolTable,
+    fn_sigs: &HashMap<String, FunctionSig>,
+) -> Result<(), SoplangError> {
     match expr {
         Expr::Literal(_) => {}
         Expr::Identifier(_) => {}
         Expr::BinaryOp { left, right, .. } => {
-            analyze_expr(left, sym)?;
-            analyze_expr(right, sym)?;
+            analyze_expr(left, sym, fn_sigs)?;
+            analyze_expr(right, sym, fn_sigs)?;
         }
-        Expr::UnaryOp { expr: e, .. } => analyze_expr(e, sym)?,
-        Expr::Call { args, .. } => {
+        Expr::UnaryOp { expr: e, .. } => analyze_expr(e, sym, fn_sigs)?,
+        Expr::Call { name, args } => {
             for a in args {
-                analyze_expr(a, sym)?;
+                analyze_expr(a, sym, fn_sigs)?;
+            }
+            if let Some(sig) = fn_sigs.get(name) {
+                if sig.params.len() != args.len() {
+                    return Err(type_error_ex(
+                        format!(
+                            "hawl '{}' waxay rabtaa {} dood, laakiin {} ayaa la bixiyay",
+                            name,
+                            sig.params.len(),
+                            args.len()
+                        ),
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E022_TYPE_MISMATCH)
+                            .with_hint("Hubi tirada doodaha markaad waceyso hawsha."),
+                    ));
+                }
+                for (idx, (arg, expected)) in args.iter().zip(sig.params.iter()).enumerate() {
+                    if *expected == TypeAnnotation::Dynamic {
+                        continue;
+                    }
+                    if let Some(found) = infer_expr_type(arg, sym, fn_sigs) {
+                        if !is_type_compatible(*expected, found) {
+                            return Err(type_error_ex(
+                                format!(
+                                    "doodda {} ee '{}' waa '{}', laakiin '{}' ayaa la helay",
+                                    idx + 1,
+                                    name,
+                                    ty_str(*expected),
+                                    ty_str(found)
+                                ),
+                                0,
+                                0,
+                                ErrorMeta::default()
+                                    .with_code(codes::E022_TYPE_MISMATCH)
+                                    .with_hint("La jaanqaad noocyada doodaha ee qeexidda hawsha."),
+                            ));
+                        }
+                    }
+                }
             }
         }
         Expr::MethodCall { obj, args, .. } => {
-            analyze_expr(obj, sym)?;
+            analyze_expr(obj, sym, fn_sigs)?;
             for a in args {
-                analyze_expr(a, sym)?;
+                analyze_expr(a, sym, fn_sigs)?;
             }
         }
         Expr::Index { obj, idx } => {
-            analyze_expr(obj, sym)?;
-            analyze_expr(idx, sym)?;
+            analyze_expr(obj, sym, fn_sigs)?;
+            analyze_expr(idx, sym, fn_sigs)?;
         }
-        Expr::Property { obj, .. } => analyze_expr(obj, sym)?,
+        Expr::Property { obj, .. } => analyze_expr(obj, sym, fn_sigs)?,
         Expr::List(exprs) => {
             for e in exprs {
-                analyze_expr(e, sym)?;
+                analyze_expr(e, sym, fn_sigs)?;
             }
         }
         Expr::Object(pairs) => {
             for (_, e) in pairs {
-                analyze_expr(e, sym)?;
+                analyze_expr(e, sym, fn_sigs)?;
             }
         }
     }
@@ -292,7 +435,11 @@ fn analyze_expr(expr: &Expr, sym: &mut SymbolTable) -> Result<(), SoplangError> 
 // Simple type inference for expressions (used for VarDecl/Assign checks)
 // ---------------------------------------------------------------------------
 
-fn infer_expr_type(expr: &Expr, sym: &SymbolTable) -> Option<TypeAnnotation> {
+fn infer_expr_type(
+    expr: &Expr,
+    sym: &SymbolTable,
+    fn_sigs: &HashMap<String, FunctionSig>,
+) -> Option<TypeAnnotation> {
     match expr {
         Expr::Literal(l) => Some(match l {
             Literal::Int(_) => TypeAnnotation::Abn,
@@ -304,10 +451,10 @@ fn infer_expr_type(expr: &Expr, sym: &SymbolTable) -> Option<TypeAnnotation> {
         Expr::Identifier(name) => resolve_name(sym, name, None).map(|v| v.type_ann),
         Expr::List(_) => Some(TypeAnnotation::Teed),
         Expr::Object(_) => Some(TypeAnnotation::Walax),
-        Expr::UnaryOp { expr: inner, .. } => infer_expr_type(inner, sym),
+        Expr::UnaryOp { expr: inner, .. } => infer_expr_type(inner, sym, fn_sigs),
         Expr::BinaryOp { op, left, right } => {
-            let lt = infer_expr_type(left, sym)?;
-            let rt = infer_expr_type(right, sym)?;
+            let lt = infer_expr_type(left, sym, fn_sigs)?;
+            let rt = infer_expr_type(right, sym, fn_sigs)?;
             match op.as_str() {
                 "+" | "-" | "*" | "%" => {
                     // Numeric ops: if any side is Jajab → Jajab, else Abn
@@ -333,7 +480,14 @@ fn infer_expr_type(expr: &Expr, sym: &SymbolTable) -> Option<TypeAnnotation> {
                 _ => None,
             }
         }
-        Expr::Call { .. } | Expr::MethodCall { .. } | Expr::Index { .. } | Expr::Property { .. } => {
+        Expr::Call { name, .. } => fn_sigs.get(name).and_then(|s| {
+            if s.ret == TypeAnnotation::Dynamic {
+                None
+            } else {
+                Some(s.ret)
+            }
+        }),
+        Expr::MethodCall { .. } | Expr::Index { .. } | Expr::Property { .. } => {
             // For now, calls/index/property are treated as dynamic (we can't easily know statically)
             None
         }
@@ -391,16 +545,80 @@ fn ty_str(a: TypeAnnotation) -> &'static str {
     }
 }
 
-fn analyze_assign_target(target: &Expr, sym: &mut SymbolTable) -> Result<(), SoplangError> {
+fn analyze_assign_target(
+    target: &Expr,
+    sym: &mut SymbolTable,
+    fn_sigs: &HashMap<String, FunctionSig>,
+) -> Result<(), SoplangError> {
     match target {
         Expr::Index { obj, idx } => {
-            analyze_expr(obj, sym)?;
-            analyze_expr(idx, sym)?;
+            analyze_expr(obj, sym, fn_sigs)?;
+            analyze_expr(idx, sym, fn_sigs)?;
         }
-        Expr::Property { obj, .. } => analyze_expr(obj, sym)?,
+        Expr::Property { obj, .. } => analyze_expr(obj, sym, fn_sigs)?,
         _ => {}
     }
     Ok(())
+}
+
+fn collect_function_sigs(stmts: &[Stmt]) -> HashMap<String, FunctionSig> {
+    let mut out = HashMap::new();
+    collect_function_sigs_rec(stmts, &mut out);
+    out
+}
+
+fn collect_function_sigs_rec(stmts: &[Stmt], out: &mut HashMap<String, FunctionSig>) {
+    for s in stmts {
+        match s {
+            Stmt::FuncDef {
+                name,
+                params,
+                return_ann,
+                ..
+            } => {
+                out.insert(
+                    name.clone(),
+                    FunctionSig {
+                        params: params.iter().map(|p| p.type_ann).collect(),
+                        ret: *return_ann,
+                    },
+                );
+            }
+            Stmt::ClassDef { body, .. } | Stmt::Block(body) => collect_function_sigs_rec(body, out),
+            Stmt::If {
+                then_body,
+                elseifs,
+                else_body,
+                ..
+            } => {
+                collect_function_sigs_rec(then_body, out);
+                for (_, b) in elseifs {
+                    collect_function_sigs_rec(b, out);
+                }
+                if let Some(b) = else_body {
+                    collect_function_sigs_rec(b, out);
+                }
+            }
+            Stmt::Switch { cases, default, .. } => {
+                for (_, b) in cases {
+                    collect_function_sigs_rec(b, out);
+                }
+                if let Some(b) = default {
+                    collect_function_sigs_rec(b, out);
+                }
+            }
+            Stmt::For { body, .. } | Stmt::While { body, .. } => collect_function_sigs_rec(body, out),
+            Stmt::TryCatch {
+                try_body,
+                catch_body,
+                ..
+            } => {
+                collect_function_sigs_rec(try_body, out);
+                collect_function_sigs_rec(catch_body, out);
+            }
+            _ => {}
+        }
+    }
 }
 
 /// Resolve a name to its VarInfo. If func_scope is given (for function body), check it first.
