@@ -4,21 +4,20 @@
 
 Soplang is a programming language with syntax inspired by Somali, making programming more accessible to Somali speakers. It combines static and dynamic typing in one language with a focus on clarity and ease of use.
 
-**The project is being rebuilt in Rust.** The repository layout separates the future Rust implementation from reference implementations and general project files.
+The **primary implementation is in Rust** (tree-walking interpreter). The repo also includes reference implementations in Python and C.
 
 ## Project structure
 
 | Path | Description |
 |------|-------------|
-| **Rust (coming)** | Primary implementation. The codebase is being migrated to Rust for performance and a single native binary. |
-| **csrc/** | C reference implementation (lexer, parser, runtime, stdlib). |
-| **psrc/** | Python reference implementation. All Python code (interpreter, tests, tooling) lives here. See [psrc/README.md](psrc/README.md). |
+| **src/** | Rust implementation (lexer, parser, interpreter, stdlib). Build with `cargo build --release`. |
 | **examples/** | Soplang example programs (`.sop` files). |
+| **benchmarks/** | Benchmark programs and [RESULTS.md](benchmarks/RESULTS.md) with timing data. |
+| **psrc/** | Python reference implementation. See [psrc/README.md](psrc/README.md). |
+| **csrc/** | C reference implementation. |
 | **docs/** | Documentation (installation, language reference, contributing). |
 | **windows/**, **linux/**, **macos/** | Platform-specific build and packaging scripts. |
 | **scripts/** | Build, test, and benchmark scripts. |
-
-Root-level files are general project files: `LICENSE`, `CHANGELOG.md`, `Makefile`, `build.sh`, `grammar.ebnf`, `main.py` (thin stub that runs the Python implementation), and `setup.py` (installs the Python package from `psrc/`).
 
 ## Features
 
@@ -42,32 +41,52 @@ hawl salaam(qof) {
 qor(salaam(magac))
 ```
 
-## Running Soplang today
+## Running Soplang
 
-Until the Rust implementation is ready, you can run the **Python implementation** from the `psrc/` directory. From the project root:
+From the project root, build and run the **Rust implementation**:
 
 ```bash
-# Install the Python package (installs psrc)
-pip install -e .
+# Build release binary
+cargo build --release
 
-# Run interactive shell
-python -m psrc
+# Run a .sop file
+./target/release/soplang examples/hello.sop
 
-# Run a file
-python -m psrc examples/hello.sop
+# Interactive REPL
+./target/release/soplang -i
 
-# Or use the stub at root (same as above)
-python main.py examples/hello.sop
+# One-liner
+./target/release/soplang -c 'qor("Salaan!")'
 ```
 
-See **[psrc/README.md](psrc/README.md)** for Python-specific setup, testing, and building.
+Or use the Makefile: `make build`, `make run FILE=examples/hello.sop`, `make shell`, `make test-rust`, `make bench`.
 
-## Rust (planned)
+## Benchmark results
 
-The main interpreter will be reimplemented in Rust. The root of the repository will then provide:
+The Rust interpreter is benchmarked with [Criterion](https://github.com/bheisler/criterion.rs). Summary (release build):
 
-- `cargo build` / `cargo run` for the primary Soplang binary
-- `csrc/` and `psrc/` kept as reference or fallback implementations
+| Benchmark | Mean time |
+|-----------|-----------|
+| fib(25) recursive | ~282 ms |
+| loop sum 1..100k | ~25 ms |
+| nested loops 200×200 | ~8.5 ms |
+| string concat 1k | ~617 µs |
+| list ops 5k elements | ~2.5 ms |
+| object create 2k | ~1.8 ms |
+
+Full details, pipeline breakdown (lex/parse vs execution), and how to run: **[benchmarks/RESULTS.md](benchmarks/RESULTS.md)**.
+
+## Legacy / reference — psrc (Python)
+
+The **Python implementation** in `psrc/` remains available for reference and comparison:
+
+```bash
+pip install -e .
+python -m psrc examples/hello.sop
+python -m psrc   # interactive shell
+```
+
+See **[psrc/README.md](psrc/README.md)** for Python setup and tests.
 
 ## Documentation
 

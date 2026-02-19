@@ -44,6 +44,7 @@ test_compilation.c
 
 # Virtual environments
 venv/
+.venv/
 env/
 .env/
 

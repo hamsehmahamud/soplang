@@ -52,7 +52,41 @@ time ./target/release/soplang benchmarks/fib_recursive.sop
 
 # Auto-generate this file with fresh results
 bash benchmarks/run_benchmarks.sh
+
+# Rust vs Python (Hyperfine) — full process comparison
+# Requires: cargo install hyperfine, pip install -e ., make build
+bash benchmarks/compare_rust_vs_python.sh
 ```
+
+## Rust vs Python (Hyperfine)
+
+[Hyperfine](https://github.com/sharkdp/hyperfine) compares **full process** runtimes (Rust binary vs `python -m psrc`) on the same `.sop` benchmarks. This measures real-world “run this script once” performance including startup.
+
+**Run the comparison:**
+
+```bash
+cargo install hyperfine   # one-time
+make build               # ensure release binary exists
+# Python: use psrc/ from repo. Either pip install -e . or:
+#   python3 -m venv .venv && .venv/bin/pip install -r psrc/requirements.txt
+#   PYTHON=.venv/bin/python bash benchmarks/compare_rust_vs_python.sh
+bash benchmarks/compare_rust_vs_python.sh
+```
+
+The script sets `PYTHONPATH` to the project root so `python -m psrc` loads the `psrc/` package without installing it. If your system Python can’t import psrc (e.g. missing `colorama`), use a venv as above.
+
+**Sample results (Rust vs Python, full process):**
+
+| Benchmark       | Rust (mean) | Python (mean) | Speedup (Rust vs Python) |
+|----------------|-------------|---------------|---------------------------|
+| fib_recursive  | ~314 ms     | ~1.71 s       | **~5.5×**                 |
+| loop_sum       | ~23 ms      | ~480 ms       | **~21×**                  |
+| nested_loops   | ~11 ms      | ~325 ms       | **~29×**                  |
+| string_concat  | ~1.1 ms     | ~191 ms       | **~170×**                 |
+| list_ops       | ~3.4 ms     | ~234 ms       | **~69×**                  |
+| object_create  | ~2.2 ms     | ~212 ms       | **~97×**                  |
+
+A combined report with summary and detailed tables is in **benchmarks/HYPERFINE.md**. Results are machine-dependent; use them for relative speedup.
 
 ## Interpreting Results
 

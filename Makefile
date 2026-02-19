@@ -18,19 +18,25 @@ PYLINT_FLAGS := --disable=C0111,C0103,C0330,C0326,W0511,R0903,R0913,R0914,R0902,
 # Default target
 .PHONY: help
 help:
-	@echo "Soplang Development Commands:"
-	@echo "  make install      - Install dependencies (dev and regular)"
-	@echo "  make install-dev  - Install development dependencies only"
-	@echo "  make test         - Run tests with pytest"
-	@echo "  make format       - Format code with black and isort"
-	@echo "  make lint         - Check code with flake8 and pylint"
-	@echo "  make check        - Run all checks (format + lint + test)"
-	@echo "  make precommit    - Run pre-commit hooks on all files"
-	@echo "  make clean        - Remove Python cache files"
+	@echo "Soplang Development Commands (Rust — primary):"
+	@echo "  make build       - Build release binary (cargo build --release)"
+	@echo "  make run         - Run a .sop file: make run FILE=examples/hello.sop"
+	@echo "  make shell       - Run interactive REPL (Rust)"
+	@echo "  make test-rust   - Run Rust unit and integration tests"
+	@echo "  make bench       - Run criterion benchmarks"
+	@echo ""
+	@echo "Legacy / Python (psrc/):"
+	@echo "  make install     - Install Python dependencies (dev and regular)"
+	@echo "  make install-dev - Install development dependencies only"
+	@echo "  make test        - Run Python tests (pytest)"
+	@echo "  make format      - Format code with black and isort"
+	@echo "  make lint        - Check code with flake8 and pylint"
+	@echo "  make check       - Run all checks (format + lint + test)"
+	@echo "  make precommit   - Run pre-commit hooks on all files"
+	@echo "  make clean       - Remove Python cache and build artifacts"
 	@echo "  make docker-build - Build Docker image"
-	@echo "  make docker-run   - Run Soplang in Docker container"
-	@echo "  make shell        - Run Soplang interactive shell"
-	@echo "  make run FILE=<file> - Run a Soplang file"
+	@echo "  make docker-run  - Run Soplang in Docker container"
+	@echo "  make run-py FILE=<file> - Run a file with Python implementation"
 
 # Installation targets
 .PHONY: install install-dev
@@ -77,7 +83,7 @@ precommit:
 .PHONY: check
 check: format-check lint test
 
-# Clean up target
+# Clean up target (Python cache + Rust target/)
 .PHONY: clean
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
@@ -93,6 +99,7 @@ clean:
 	find . -type d -name ".tox" -exec rm -rf {} +
 	find . -type d -name "dist" -exec rm -rf {} +
 	find . -type d -name "build" -exec rm -rf {} +
+	cargo clean 2>/dev/null || true
 
 # Docker targets
 .PHONY: docker-build docker-run
@@ -103,14 +110,35 @@ docker-run:
 	docker-compose up -d
 	docker-compose exec soplang python -m psrc
 
-# Run targets for Soplang
-.PHONY: shell run
-shell:
-	$(PYTHON) main.py
+# --- Rust targets (primary implementation) ---
+.PHONY: build run shell test-rust bench
+build:
+	cargo build --release
 
 run:
 	@if [ -z "$(FILE)" ]; then \
 		echo "Usage: make run FILE=<filename>"; \
 		exit 1; \
 	fi
+	./target/release/soplang $(FILE)
+
+shell:
+	./target/release/soplang -i
+
+test-rust:
+	cargo test
+
+bench:
+	cargo bench
+
+# --- Run targets for Python (legacy) ---
+.PHONY: run-py shell-py
+run-py:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make run-py FILE=<filename>"; \
+		exit 1; \
+	fi
 	$(PYTHON) main.py $(FILE)
+
+shell-py:
+	$(PYTHON) main.py
