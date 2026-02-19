@@ -65,3 +65,21 @@ pub fn parser_error(msg: impl Into<String>, line: usize, col: usize) -> SoplangE
         col,
     }
 }
+
+/// Build a runtime error at the given source location.
+pub fn runtime_error(msg: impl Into<String>, line: usize, col: usize) -> SoplangError {
+    SoplangError::Runtime {
+        msg:  msg.into(),
+        line,
+        col,
+    }
+}
+
+/// Build a type error at the given source location.
+pub fn type_error(msg: impl Into<String>, line: usize, col: usize) -> SoplangError {
+    SoplangError::Type {
+        msg:  msg.into(),
+        line,
+        col,
+    }
+}

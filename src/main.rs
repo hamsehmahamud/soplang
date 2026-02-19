@@ -1,13 +1,17 @@
 mod ast;
 mod error;
+mod interpreter;
 mod lexer;
 mod parser;
+mod scope;
 mod token;
+mod value;
 
 use std::env;
 use std::fs;
 use std::process;
 
+use interpreter::Interpreter;
 use lexer::Lexer;
 use parser::Parser;
 
@@ -50,8 +54,18 @@ fn main() {
             }
         }
     } else {
-        for t in tokens {
-            println!("{}", t);
+        let mut parser = Parser::new(tokens);
+        let stmts = match parser.parse() {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("{}", e);
+                process::exit(1);
+            }
+        };
+        let mut interp = Interpreter::new();
+        if let Err(e) = interp.run(stmts) {
+            eprintln!("{}", e);
+            process::exit(1);
         }
     }
 }
