@@ -43,7 +43,7 @@ impl LlvmBackend {
 
         let escaped_source = format!("{source:?}");
         let runner = format!(
-            "use std::process;\nuse soplang::{{format_error_with_source, run_source, Interpreter}};\n\nconst SOURCE: &str = {src};\n\nfn main() {{\n    let mut interp = Interpreter::new();\n    match run_source(&mut interp, SOURCE, None, false, false, true) {{\n        Ok(()) => {{}}\n        Err(e) => {{\n            eprintln!(\"{{}}\", format_error_with_source(&e, Some(SOURCE)));\n            process::exit(1);\n        }}\n    }}\n}}\n",
+            "use std::process;\nuse soplang::{{format_error_with_source, run_source}};\n\nconst SOURCE: &str = {src};\n\nfn main() {{\n    match run_source(SOURCE, None, false, false, true) {{\n        Ok(()) => {{}}\n        Err(e) => {{\n            eprintln!(\"{{}}\", format_error_with_source(&e, Some(SOURCE)));\n            process::exit(1);\n        }}\n    }}\n}}\n",
             src = escaped_source
         );
         fs::write(src_dir.join("main.rs"), runner).map_err(|e| runtime_error(e.to_string(), 0, 0))?;

@@ -3,20 +3,18 @@
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
-use soplang::{format_error_with_source, Interpreter, Lexer, Parser};
+use soplang::{format_error_with_source, run_source};
 
 const PROMPT: &str = "soplang> ";
 
 pub struct Shell {
-    interpreter: Interpreter,
-    editor:      DefaultEditor,
+    editor: DefaultEditor,
 }
 
 impl Shell {
     pub fn new() -> Self {
         Self {
-            interpreter: Interpreter::new(),
-            editor:      DefaultEditor::new().expect("rustyline Editor"),
+            editor: DefaultEditor::new().expect("rustyline Editor"),
         }
     }
 
@@ -37,21 +35,7 @@ impl Shell {
     }
 
     fn execute(&mut self, source: &str) {
-        let tokens = match Lexer::new(source).tokenize() {
-            Ok(t) => t,
-            Err(e) => {
-                eprintln!("{}", format_error_with_source(&e, Some(source)));
-                return;
-            }
-        };
-        let stmts = match Parser::new(tokens).parse() {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("{}", format_error_with_source(&e, Some(source)));
-                return;
-            }
-        };
-        if let Err(e) = self.interpreter.run(stmts) {
+        if let Err(e) = run_source(source, None, false, false, true) {
             eprintln!("{}", format_error_with_source(&e, Some(source)));
         }
     }

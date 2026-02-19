@@ -4,7 +4,6 @@ pub mod ast;
 pub mod backend;
 pub mod error;
 pub mod hir;
-pub mod interpreter;
 pub mod runtime;
 pub mod lexer;
 pub mod parser;
@@ -18,7 +17,6 @@ pub use ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
 pub use hir::{HirFunction, HirInstr, HirModule, HirLowering};
 pub use semantic::{analyze, ClassMeta, FunctionMeta, Scope, SymbolTable, VarInfo};
 pub use error::{format_error_with_source, SoplangError};
-pub use interpreter::Interpreter;
 pub use lexer::Lexer;
 pub use parser::Parser;
 pub use token::{Token, TokenType};
@@ -26,9 +24,9 @@ pub use value::Value;
 
 use std::path::Path;
 
-/// Run source code (lex, parse, execute). Used by main and tests.
+/// Run source code through the compiled pipeline (semantic → HIR → Cranelift JIT).
+/// Used by the CLI and tests. Interpreter is no longer used in Phase 6.
 pub fn run_source(
-    interp: &mut Interpreter,
     source: &str,
     path: Option<&Path>,
     print_ast: bool,
@@ -43,9 +41,9 @@ pub fn run_source(
         }
         return Ok(());
     }
+    let sym = analyze(&stmts)?;
+    let hir = HirLowering::lower(&sym, &stmts);
     if dump_hir {
-        let sym = analyze(&stmts)?;
-        let hir = HirLowering::lower(&sym, &stmts);
         for f in &hir.functions {
             println!("\n--- {} ---", f.name);
             for instr in &f.body {
@@ -58,16 +56,10 @@ pub fn run_source(
         }
         return Ok(());
     }
-    if jit {
-        let sym = analyze(&stmts)?;
-        let hir = HirLowering::lower(&sym, &stmts);
-        let mut backend = backend::cranelift::CraneliftBackend::new()?;
-        backend.compile_module(&hir)?;
-        backend.run_main()?;
-        return Ok(());
-    }
-    let _ = analyze(&stmts)?;
-    interp.run_with_path(stmts, path)
+    // Phase 6: always run via Cranelift JIT; `jit` flag is kept for CLI compatibility.
+    let mut backend = backend::cranelift::CraneliftBackend::new()?;
+    backend.compile_module(&hir)?;
+    backend.run_main()
 }
 
 /// Phase 5: build a standalone executable (AOT path).

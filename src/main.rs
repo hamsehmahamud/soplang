@@ -6,7 +6,7 @@ use std::process;
 
 use clap::Parser as ClapParser;
 
-use soplang::{build_source, format_error_with_source, run_source, Interpreter};
+use soplang::{build_source, format_error_with_source, run_source};
 
 #[derive(ClapParser)]
 #[command(name = "soplang", about = "The Somali Programming Language", version)]
@@ -74,8 +74,7 @@ fn main() {
     }
 
     let run_then_maybe_shell = |path: PathBuf, source: String| {
-        let mut interp = Interpreter::new();
-        match run_source(&mut interp, &source, Some(&path), cli.ast, cli.hir, cli.jit) {
+        match run_source(&source, Some(&path), cli.ast, cli.hir, cli.jit) {
             Ok(()) => {
                 if cli.interactive {
                     run_shell();
@@ -89,8 +88,7 @@ fn main() {
     };
 
     if let Some(code) = &cli.command {
-        let mut interp = Interpreter::new();
-        match run_source(&mut interp, code, None, false, false, false) {
+        match run_source(code, None, false, false, false) {
             Ok(()) => process::exit(0),
             Err(e) => {
                 eprintln!("{}", format_error_with_source(&e, Some(code)));
@@ -136,8 +134,7 @@ fn main() {
                 process::exit(1);
             }
         };
-        let mut interp = Interpreter::new();
-        match run_source(&mut interp, &source, Some(path.as_path()), cli.ast, cli.hir, cli.jit) {
+        match run_source(&source, Some(path.as_path()), cli.ast, cli.hir, cli.jit) {
             Ok(()) => {
                 if cli.interactive {
                     run_shell();
