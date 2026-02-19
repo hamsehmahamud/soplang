@@ -70,6 +70,8 @@ fn register_runtime_symbols(builder: &mut JITBuilder) {
     sym!(builder, soplang_get_builtin);
     sym!(builder, soplang_store_global);
     sym!(builder, soplang_call_method);
+    sym!(builder, soplang_check_type);
+    sym!(builder, soplang_mark_const);
 }
 
 fn make_sig(n_params: usize, n_returns: usize) -> Signature {
@@ -117,6 +119,7 @@ fn max_slot_in_body(body: &[HirInstr]) -> usize {
             }
             HirInstr::Return { val } => { mx = mx.max(*val + 1); }
             HirInstr::JumpIf { cond, .. } => { mx = mx.max(*cond + 1); }
+            HirInstr::CheckType { src, .. } => { mx = mx.max(*src + 1); }
             _ => {}
         }
     }
@@ -572,6 +575,33 @@ fn compile_body(
                 if terminated { continue; }
                 builder.ins().jump(block_map[target], &[]);
                 terminated = true;
+            }
+
+            HirInstr::CheckType { src, type_tag, name } => {
+                if terminated { continue; }
+                let st = builder.use_var(var_tags[*src]);
+                let sp = builder.use_var(var_pays[*src]);
+                let et = builder.ins().iconst(types::I64, *type_tag as i64);
+                let nptr = builder.ins().iconst(types::I64, name.as_ptr() as i64);
+                let nlen = builder.ins().iconst(types::I64, name.len() as i64);
+                let sig = make_sig(5, 0);
+                let fid = module
+                    .declare_function("soplang_check_type", Linkage::Import, &sig)
+                    .map_err(|e| runtime_error(e.to_string(), 0, 0))?;
+                let fref = module.declare_func_in_func(fid, builder.func);
+                builder.ins().call(fref, &[st, sp, et, nptr, nlen]);
+            }
+
+            HirInstr::MarkConst { name } => {
+                if terminated { continue; }
+                let nptr = builder.ins().iconst(types::I64, name.as_ptr() as i64);
+                let nlen = builder.ins().iconst(types::I64, name.len() as i64);
+                let sig = make_sig(2, 0);
+                let fid = module
+                    .declare_function("soplang_mark_const", Linkage::Import, &sig)
+                    .map_err(|e| runtime_error(e.to_string(), 0, 0))?;
+                let fref = module.declare_func_in_func(fid, builder.func);
+                builder.ins().call(fref, &[nptr, nlen]);
             }
 
             HirInstr::Pop { .. } | HirInstr::TryBegin { .. } | HirInstr::TryEnd | HirInstr::BindError { .. } => {}

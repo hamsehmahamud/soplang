@@ -4,7 +4,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::error::SoplangError;
+use crate::error::{codes, lexer_error_ex, ErrorMeta, SoplangError};
 use crate::token::{Token, TokenType};
 
 pub struct Lexer<'a> {
@@ -113,11 +113,12 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     return Ok(Token::new(TokenType::And, "&&", line, col));
                 }
-                return Err(SoplangError::Lexer {
-                    msg:  format!("Xaraf aan la filayn: {}", c),
+                return Err(lexer_error_ex(
+                    format!("Xaraf aan la filayn: {}", c),
                     line,
                     col,
-                });
+                    ErrorMeta::default().with_code(codes::E001_UNEXPECTED_CHAR),
+                ));
             }
             if c == '|' {
                 self.advance();
@@ -125,11 +126,12 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     return Ok(Token::new(TokenType::Or, "||", line, col));
                 }
-                return Err(SoplangError::Lexer {
-                    msg:  format!("Xaraf aan la filayn: {}", c),
+                return Err(lexer_error_ex(
+                    format!("Xaraf aan la filayn: {}", c),
                     line,
                     col,
-                });
+                    ErrorMeta::default().with_code(codes::E001_UNEXPECTED_CHAR),
+                ));
             }
 
             // Single-char tokens
@@ -150,11 +152,12 @@ impl<'a> Lexer<'a> {
                 ';' => (TokenType::Semicolon, ";"),
                 '.' => (TokenType::Dot, "."),
                 _ => {
-                    return Err(SoplangError::Lexer {
-                        msg:  format!("Xaraf aan la filayn: {}", c),
+                    return Err(lexer_error_ex(
+                        format!("Xaraf aan la filayn: {}", c),
                         line,
                         col,
-                    });
+                        ErrorMeta::default().with_code(codes::E001_UNEXPECTED_CHAR),
+                    ));
                 }
             };
             self.advance();
@@ -212,11 +215,12 @@ impl<'a> Lexer<'a> {
             }
             self.advance();
         }
-        Err(SoplangError::Lexer {
-            msg:  "Faallo aan la dhammaystirin".to_string(),
-            line: self.line,
-            col:  self.col,
-        })
+        Err(lexer_error_ex(
+            "Faallo aan la dhammaystirin",
+            self.line,
+            self.col,
+            ErrorMeta::default().with_code(codes::E003_UNTERMINATED_COMMENT),
+        ))
     }
 
     fn read_identifier(&mut self, start_line: usize, start_col: usize) -> Token {
@@ -265,11 +269,12 @@ impl<'a> Lexer<'a> {
             self.advance(); // closing quote
             Ok(Token::new(TokenType::String, s, start_line, start_col))
         } else {
-            Err(SoplangError::Lexer {
-                msg:  "Qoraal aan la dhammaystirin".to_string(),
-                line: self.line,
-                col:  self.col,
-            })
+            Err(lexer_error_ex(
+                "Qoraal aan la dhammaystirin",
+                self.line,
+                self.col,
+                ErrorMeta::default().with_code(codes::E002_UNTERMINATED_STRING),
+            ))
         }
     }
 }

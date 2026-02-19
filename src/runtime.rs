@@ -4,12 +4,19 @@
 #![allow(clippy::cast_lossless, clippy::cast_possible_truncation)]
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::error::{runtime_error, SoplangError};
+use crate::error::{runtime_error, type_error, SoplangError};
 use crate::stdlib;
 use crate::value::{value_to_string, NativeFn, Value};
+
+fn fatal_error(e: impl std::fmt::Display) -> ! {
+    use std::io::Write;
+    let _ = std::io::stdout().flush();
+    eprintln!("{}", e);
+    std::process::exit(1);
+}
 
 // ----- Tag constants (match COMPILER_PLAN) -----
 pub const TAG_NULL: u8 = 0;
@@ -51,6 +58,7 @@ thread_local! {
     static BUILTIN_INDICES: RefCell<Option<HashMap<String, i64>>> = RefCell::new(None);
     static GLOBAL_VARS: RefCell<HashMap<String, SoplangValue>> = RefCell::new(HashMap::new());
     static COMPILED_FN_TABLE: RefCell<Vec<CompiledFnEntry>> = RefCell::new(Vec::new());
+    static CONST_GLOBALS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
 }
 
 #[derive(Clone, Copy)]
@@ -686,7 +694,7 @@ pub extern "C" fn soplang_call_method(
     };
     match result {
         Ok(v) => value_to_soplang(&v),
-        Err(_) => SoplangValue::null(),
+        Err(e) => fatal_error(e),
     }
 }
 
@@ -834,8 +842,53 @@ pub extern "C" fn soplang_store_global(name: *const u8, len: usize, tag: i64, pa
     if name.is_null() { return; }
     let key = unsafe { std::slice::from_raw_parts(name, len) };
     let key = String::from_utf8_lossy(key).into_owned();
+    let is_const = CONST_GLOBALS.with(|c| c.borrow().contains(&key));
+    if is_const {
+        fatal_error(runtime_error(
+            format!("Ma bedeli kartid qiimaha doorsamaha madoor '{}'", key), 0, 0,
+        ));
+    }
     let sv = SoplangValue { tag: tag as u8, _pad: [0; 7], payload };
     GLOBAL_VARS.with(|g| g.borrow_mut().insert(key, sv));
+}
+
+/// Mark a global as constant (C ABI).
+#[no_mangle]
+pub extern "C" fn soplang_mark_const(name: *const u8, len: usize) {
+    if name.is_null() { return; }
+    let key = unsafe { std::slice::from_raw_parts(name, len) };
+    let key = String::from_utf8_lossy(key).into_owned();
+    CONST_GLOBALS.with(|c| c.borrow_mut().insert(key));
+}
+
+/// Runtime type validation for typed variable assignment (C ABI).
+/// expected_type: 1=abn, 2=jajab, 3=qoraal, 4=bool, 5=teed, 6=walax, 0=dynamic(skip).
+#[no_mangle]
+pub extern "C" fn soplang_check_type(tag: i64, payload: i64, expected_type: i64, name_ptr: *const u8, name_len: usize) {
+    if expected_type == 0 { return; }
+    let sv = SoplangValue { tag: tag as u8, _pad: [0; 7], payload };
+    let val = soplang_to_value(sv).unwrap_or(Value::Null);
+    let ok = match expected_type {
+        1 => matches!(val, Value::Int(_)) || matches!(&val, Value::Float(x) if x.fract() == 0.0 && x.is_finite()),
+        2 => matches!(val, Value::Float(_)) || matches!(val, Value::Int(_)),
+        3 => matches!(val, Value::Str(_)),
+        4 => matches!(val, Value::Bool(_)),
+        5 => matches!(val, Value::List(_)),
+        6 => matches!(val, Value::Object(_)),
+        _ => true,
+    };
+    if !ok {
+        let name = if name_ptr.is_null() { "" } else {
+            unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(name_ptr, name_len)) }
+        };
+        let type_name = match expected_type {
+            1 => "abn", 2 => "jajab", 3 => "qoraal", 4 => "bool", 5 => "teed", 6 => "walax", _ => "?",
+        };
+        fatal_error(type_error(
+            format!("'{}' waa {} laakin qiimaheeda '{}' ma ahan {}", name, type_name, val, type_name),
+            0, 0,
+        ));
+    }
 }
 
 /// Resolve a builtin or global by name.
@@ -872,7 +925,10 @@ pub fn register_compiled_fn(ptr: *const u8, n_params: usize) -> i64 {
 #[no_mangle]
 pub extern "C" fn soplang_call(callee: SoplangValue, args: *const SoplangValue, n: i32) -> SoplangValue {
     if callee.tag != TAG_FUNC {
-        return SoplangValue::null();
+        let val = soplang_to_value(callee).unwrap_or(Value::Null);
+        fatal_error(runtime_error(
+            format!("'{}' ma ahan hawl, lama wici karo", value_to_string(&val)), 0, 0,
+        ));
     }
     if let Some(f) = native_fn_get(callee.payload) {
         let mut argv = Vec::new();
@@ -888,7 +944,7 @@ pub extern "C" fn soplang_call(callee: SoplangValue, args: *const SoplangValue, 
         }
         match f(argv) {
             Ok(v) => value_to_soplang(&v),
-            Err(_) => SoplangValue::null(),
+            Err(e) => fatal_error(e),
         }
     } else {
         let native_count = NATIVE_FN_TABLE.with(|t| t.borrow().len()) as i64;

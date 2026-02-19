@@ -6,7 +6,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use crate::ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
-use crate::error::{runtime_error, type_error, SoplangError};
+use crate::error::{codes, runtime_error, runtime_error_ex, type_error, ErrorMeta, SoplangError};
 use crate::scope::Env;
 use crate::stdlib;
 use crate::value::{Value, FunctionId};
@@ -68,9 +68,34 @@ impl Interpreter {
         for stmt in &stmts {
             let sig = self.exec_stmt(stmt, Rc::clone(&self.globals), current_file)?;
             match sig {
-                Signal::Break => return Err(runtime_error("Jooji waa in ay ku jiraan xalqad", 0, 0)),
-                Signal::Continue => return Err(runtime_error("soco waa in ay ku jiraan xalqad", 0, 0)),
-                Signal::Return(_) => return Err(runtime_error("celi waa in ay ku jirto hawl", 0, 0)),
+                Signal::Break => {
+                    return Err(runtime_error_ex(
+                        "Jooji waa in ay ku jiraan xalqad",
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E032_BREAK_OUTSIDE_LOOP)
+                            .with_hint("Isticmaal 'jooji' oo kaliya gudaha kuceli/intay xaqlooyinka."),
+                    ))
+                }
+                Signal::Continue => {
+                    return Err(runtime_error_ex(
+                        "soco waa in ay ku jiraan xalqad",
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E032_BREAK_OUTSIDE_LOOP)
+                            .with_hint("Isticmaal 'soco' oo kaliya gudaha kuceli/intay xaqlooyinka."),
+                    ))
+                }
+                Signal::Return(_) => {
+                    return Err(runtime_error_ex(
+                        "celi waa in ay ku jirto hawl",
+                        0,
+                        0,
+                        ErrorMeta::default().with_hint("Hubi in 'celi' ay ku jirto gudaha hawl (function)."),
+                    ))
+                }
                 Signal::None => {}
             }
         }
@@ -299,6 +324,7 @@ impl Interpreter {
                 msg:  format!("Faylka '{}' ma helin", filename),
                 line: 0,
                 col:  0,
+                meta: crate::error::ErrorMeta::default(),
             }
         })?;
         let tokens = crate::lexer::Lexer::new(&source).tokenize().map_err(|e| {
@@ -306,6 +332,7 @@ impl Interpreter {
                 msg:  e.to_string(),
                 line: 0,
                 col:  0,
+                meta: crate::error::ErrorMeta::default(),
             }
         })?;
         let stmts = crate::parser::Parser::new(tokens).parse().map_err(|e| {
@@ -313,6 +340,7 @@ impl Interpreter {
                 msg:  e.to_string(),
                 line: 0,
                 col:  0,
+                meta: crate::error::ErrorMeta::default(),
             }
         })?;
         self.exec_block(&stmts, env, Some(path.as_path()))
@@ -338,7 +366,14 @@ impl Interpreter {
                 if let Value::List(list) = arr {
                     let mut v = list.borrow_mut();
                     if idx_i < 0 || idx_i >= v.len() as i64 {
-                        return Err(runtime_error(format!("Tirada fihris-ku waa ka baxsan xadka: {}", idx_i), line, col));
+                        return Err(runtime_error_ex(
+                            format!("Tirada fihris-ku waa ka baxsan xadka: {}", idx_i),
+                            line,
+                            col,
+                            ErrorMeta::default()
+                                .with_code(codes::E031_INDEX_OUT_OF_BOUNDS)
+                                .with_hint("Fiiri dhererka teedka ka hor intaadan isticmaalin fihris."),
+                        ));
                     }
                     v[idx_i as usize] = value;
                     Ok(())
@@ -408,12 +443,26 @@ impl Interpreter {
                     Ok(instance)
                 } else {
                     let callee = env.borrow().get(name).ok_or_else(|| {
-                        runtime_error(format!("Hawl aan la qeexin: '{}'", name), 0, 0)
+                        runtime_error_ex(
+                            format!("Hawl aan la qeexin: '{}'", name),
+                            0,
+                            0,
+                            ErrorMeta::default()
+                                .with_code(codes::E033_NOT_A_FUNCTION)
+                                .with_hint("Hubi in doorsameha uu yahay hawl la qeexay, ama isticmaal magac sax ah."),
+                        )
                     })?;
                     match callee {
                         Value::NativeFunction(f) => f(evaled),
                         Value::Function(id) => self.call_user_function(id.0, &evaled, env),
-                        _ => Err(runtime_error(format!("'{}' ma aha hawl", name), 0, 0)),
+                        _ => Err(runtime_error_ex(
+                            format!("'{}' ma aha hawl", name),
+                            0,
+                            0,
+                            ErrorMeta::default()
+                                .with_code(codes::E033_NOT_A_FUNCTION)
+                                .with_hint("Waxaad isku dayday inaad u yeerto qiime aan ahayn hawl. Hubi nooca doorsamaha."),
+                        )),
                     }
                 }
             }
@@ -460,7 +509,16 @@ impl Interpreter {
         let body = self
             .functions
             .get(id)
-            .ok_or_else(|| runtime_error("Hawl aan la aqoon", 0, 0))
+            .ok_or_else(|| {
+                runtime_error_ex(
+                    "Hawl aan la aqoon",
+                    0,
+                    0,
+                    ErrorMeta::default()
+                        .with_code(codes::E033_NOT_A_FUNCTION)
+                        .with_hint("Hubi magaca hawsha iyo in la qeexay ka hor intaadan u yeerin."),
+                )
+            })
             .map(|def| (def.body.clone(), def.params.clone(), Rc::clone(&def.env)))?;
         let (body, params, def_env) = body;
         let call_env = Rc::new(RefCell::new(Env::new_child(def_env)));
@@ -646,7 +704,14 @@ impl Interpreter {
             "/" => {
                 let (_, rn) = to_two_numbers(&l, &r).ok_or_else(|| type_error("Qeybinta waa in ay noqoto tiro", 0, 0))?;
                 if rn == 0.0 {
-                    return Err(runtime_error("Ma suurtogali karto qeybinta eber", 0, 0));
+                    return Err(runtime_error_ex(
+                        "Ma suurtogali karto qeybinta eber",
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E030_DIVISION_BY_ZERO)
+                            .with_hint("Hubi in qaybiyaha (qaybta hoose) uusan noqon eber."),
+                    ));
                 }
                 let (ln, rn) = to_two_numbers(&l, &r).unwrap();
                 Ok(Value::Float(ln / rn))

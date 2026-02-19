@@ -29,6 +29,11 @@ fn test_hir_all_examples() {
     sop_files.sort();
 
     for path in sop_files {
+        let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+        // Skip examples that are intentionally type-error tests.
+        if name.contains("type_error") || name.contains("reassignment") {
+            continue;
+        }
         let result = run_hir(&path);
         assert!(
             result.is_ok(),

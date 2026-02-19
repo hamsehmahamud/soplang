@@ -293,7 +293,7 @@ pub fn list_jar(lst: Rc<RefCell<Vec<Value>>>, args: &[Value]) -> Result<Value, S
     end = end.min(len);
     let start = start as usize;
     let end = end as usize;
-    let slice: Vec<Value> = v[start..end].to_vec();
+    let slice: Vec<Value> = if start >= end { Vec::new() } else { v[start..end].to_vec() };
     Ok(Value::List(Rc::new(RefCell::new(slice))))
 }
 

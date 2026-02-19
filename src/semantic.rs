@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use crate::ast::{Expr, Stmt, TypeAnnotation};
-use crate::error::{type_error, SoplangError};
+use crate::ast::{Expr, Literal, Stmt, TypeAnnotation};
+use crate::error::{codes, type_error_ex, ErrorMeta, SoplangError};
 
 /// Symbol table built by semantic analysis. Used by HIR lowering.
 #[derive(Debug, Default)]
@@ -68,10 +68,13 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
         Stmt::VarDecl { name, type_ann, is_const, value, line, col } => {
             let scope = sym.scopes.last_mut().unwrap();
             if scope.vars.contains_key(name) {
-                return Err(type_error(
+                return Err(type_error_ex(
                     format!("Magaca '{}' waa la qoray horay", name),
                     *line,
                     *col,
+                    ErrorMeta::default()
+                        .with_code(codes::E020_REDECLARED)
+                        .with_hint("Magacan ayaa horay loogu isticmaalay. Isticmaal magac kale oo gaar ah."),
                 ));
             }
             let slot = scope.vars.len();
@@ -84,18 +87,57 @@ fn analyze_stmt(stmt: &Stmt, sym: &mut SymbolTable) -> Result<(), SoplangError> 
                     is_captured: false,
                 },
             );
-            // Optionally validate initializer type (e.g. abn x = "hi" -> error). For now we skip.
+            // Phase 2: basic static type check for initializer when we can infer a type.
+            if *type_ann != TypeAnnotation::Dynamic {
+                if let Some(expr_ty) = infer_expr_type(value, sym) {
+                    if !is_type_compatible(*type_ann, expr_ty) {
+                        return Err(type_mismatch_error(
+                            name,
+                            *type_ann,
+                            expr_ty,
+                            *line,
+                            *col,
+                        ));
+                    }
+                }
+            }
             analyze_expr(value, sym)?;
         }
         Stmt::Assign { target, value, line, col } => {
             if let Expr::Identifier(name) = target {
-                resolve_name(sym, &name, None).ok_or_else(|| {
-                    type_error(
+                let var = resolve_name(sym, &name, None).ok_or_else(|| {
+                    type_error_ex(
                         format!("Magaca '{}' ma aqoonsan", name),
                         *line,
                         *col,
+                        ErrorMeta::default()
+                            .with_code(codes::E021_UNDECLARED)
+                            .with_hint("Doorsame cusub ku qeex 'door' ama 'madoor' ka hor intaadan isticmaalin."),
                     )
                 })?;
+                if var.is_const {
+                    return Err(type_error_ex(
+                        format!("Ma bedeli kartid qiimaha doorsamaha madoor '{}'", name),
+                        *line,
+                        *col,
+                        ErrorMeta::default()
+                            .with_code(codes::E020_REDECLARED)
+                            .with_hint("Doorsamaha madoor ma beddeli karaan qiimahooda. Isticmaal 'door' haddii aad rabto mid beddeli kara."),
+                    ));
+                }
+                if var.type_ann != TypeAnnotation::Dynamic {
+                    if let Some(expr_ty) = infer_expr_type(value, sym) {
+                        if !is_type_compatible(var.type_ann, expr_ty) {
+                            return Err(type_mismatch_error(
+                                name,
+                                var.type_ann,
+                                expr_ty,
+                                *line,
+                                *col,
+                            ));
+                        }
+                    }
+                }
             } else {
                 // Index or Property: resolve subexpressions only
                 analyze_assign_target(target, sym)?;
@@ -244,6 +286,109 @@ fn analyze_expr(expr: &Expr, sym: &mut SymbolTable) -> Result<(), SoplangError> 
         }
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Simple type inference for expressions (used for VarDecl/Assign checks)
+// ---------------------------------------------------------------------------
+
+fn infer_expr_type(expr: &Expr, sym: &SymbolTable) -> Option<TypeAnnotation> {
+    match expr {
+        Expr::Literal(l) => Some(match l {
+            Literal::Int(_) => TypeAnnotation::Abn,
+            Literal::Float(_) => TypeAnnotation::Jajab,
+            Literal::Str(_) => TypeAnnotation::Qoraal,
+            Literal::Bool(_) => TypeAnnotation::Bool,
+            Literal::Null => TypeAnnotation::Dynamic,
+        }),
+        Expr::Identifier(name) => resolve_name(sym, name, None).map(|v| v.type_ann),
+        Expr::List(_) => Some(TypeAnnotation::Teed),
+        Expr::Object(_) => Some(TypeAnnotation::Walax),
+        Expr::UnaryOp { expr: inner, .. } => infer_expr_type(inner, sym),
+        Expr::BinaryOp { op, left, right } => {
+            let lt = infer_expr_type(left, sym)?;
+            let rt = infer_expr_type(right, sym)?;
+            match op.as_str() {
+                "+" | "-" | "*" | "%" => {
+                    // Numeric ops: if any side is Jajab → Jajab, else Abn
+                    if matches!(lt, TypeAnnotation::Jajab) || matches!(rt, TypeAnnotation::Jajab) {
+                        Some(TypeAnnotation::Jajab)
+                    } else if matches!(lt, TypeAnnotation::Abn) && matches!(rt, TypeAnnotation::Abn) {
+                        Some(TypeAnnotation::Abn)
+                    } else {
+                        None
+                    }
+                }
+                "/" => {
+                    // Soplang division returns decimal even for integer operands.
+                    if matches!(lt, TypeAnnotation::Abn | TypeAnnotation::Jajab)
+                        && matches!(rt, TypeAnnotation::Abn | TypeAnnotation::Jajab)
+                    {
+                        Some(TypeAnnotation::Jajab)
+                    } else {
+                        None
+                    }
+                }
+                "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" => Some(TypeAnnotation::Bool),
+                _ => None,
+            }
+        }
+        Expr::Call { .. } | Expr::MethodCall { .. } | Expr::Index { .. } | Expr::Property { .. } => {
+            // For now, calls/index/property are treated as dynamic (we can't easily know statically)
+            None
+        }
+    }
+}
+
+fn is_type_compatible(target: TypeAnnotation, value: TypeAnnotation) -> bool {
+    use TypeAnnotation::*;
+    match target {
+        Dynamic => true,
+        // Interpreter allows assigning integral decimals into abn at runtime.
+        // Keep semantic check permissive here to avoid false negatives.
+        Abn => matches!(value, Abn | Jajab),
+        Jajab => matches!(value, Abn | Jajab),
+        Qoraal => matches!(value, Qoraal),
+        Bool => matches!(value, Bool),
+        Teed => matches!(value, Teed),
+        Walax => matches!(value, Walax),
+    }
+}
+
+fn type_mismatch_error(
+    name: &str,
+    expected: TypeAnnotation,
+    found: TypeAnnotation,
+    line: usize,
+    col: usize,
+) -> SoplangError {
+    let msg = format!(
+        "'{}' waa {} laakin qiimaheeda '{}' ma ahan {}",
+        name,
+        ty_str(expected),
+        ty_str(found),
+        ty_str(expected)
+    );
+    type_error_ex(
+        msg,
+        line,
+        col,
+        ErrorMeta::default()
+            .with_code(codes::E022_TYPE_MISMATCH)
+            .with_hint("Hubi in nooca qiimaha uu la mid yahay nooca lagu qeexay doorsamaha."),
+    )
+}
+
+fn ty_str(a: TypeAnnotation) -> &'static str {
+    match a {
+        TypeAnnotation::Abn => "abn",
+        TypeAnnotation::Jajab => "jajab",
+        TypeAnnotation::Qoraal => "qoraal",
+        TypeAnnotation::Bool => "bool",
+        TypeAnnotation::Teed => "teed",
+        TypeAnnotation::Walax => "walax",
+        TypeAnnotation::Dynamic => "dynamic",
+    }
 }
 
 fn analyze_assign_target(target: &Expr, sym: &mut SymbolTable) -> Result<(), SoplangError> {

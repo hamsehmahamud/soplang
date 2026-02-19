@@ -66,5 +66,6 @@ pub fn run_source(
         backend.run_main()?;
         return Ok(());
     }
+    let _ = analyze(&stmts)?;
     interp.run_with_path(stmts, path)
 }

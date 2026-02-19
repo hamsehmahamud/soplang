@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use crate::ast::{Expr, Literal, Stmt};
+use crate::ast::{Expr, Literal, Stmt, TypeAnnotation};
 use crate::semantic::{resolve_name, SymbolTable};
 
 pub type Slot = usize;
@@ -67,6 +67,8 @@ pub enum HirInstr {
     TryEnd,
     BindError { dst: Slot },
     Pop { dst: Slot }, // discard value (for expr stmt)
+    CheckType { src: Slot, type_tag: u8, name: String },
+    MarkConst { name: String },
 }
 
 #[derive(Debug, Clone)]
@@ -151,6 +153,8 @@ impl fmt::Display for HirInstr {
             HirInstr::TryEnd => write!(f, "  try_end"),
             HirInstr::BindError { dst } => write!(f, "  bind_error %{}", dst),
             HirInstr::Pop { dst } => write!(f, "  pop %{}", dst),
+            HirInstr::CheckType { src, type_tag, name } => write!(f, "  check_type %{} {} {}", src, type_tag, name),
+            HirInstr::MarkConst { name } => write!(f, "  mark_const {}", name),
         }
     }
 }
@@ -267,7 +271,7 @@ impl<'a> HirLowering<'a> {
 
     fn lower_stmt(&mut self, stmt: &Stmt) {
         match stmt {
-            Stmt::VarDecl { name, value, .. } => {
+            Stmt::VarDecl { name, value, type_ann, is_const, .. } => {
                 let val_slot = self.lower_expr(value);
                 if let Some(slot) = self.resolve_slot(name) {
                     self.emit(HirInstr::Copy { dst: slot, src: val_slot });
@@ -276,6 +280,16 @@ impl<'a> HirLowering<'a> {
                     }
                 } else {
                     self.emit(HirInstr::Store { name: name.clone(), src: val_slot });
+                }
+                if *type_ann != TypeAnnotation::Dynamic {
+                    self.emit(HirInstr::CheckType {
+                        src: val_slot,
+                        type_tag: type_ann_to_tag(*type_ann),
+                        name: name.clone(),
+                    });
+                }
+                if *is_const && self.func_scope.is_none() {
+                    self.emit(HirInstr::MarkConst { name: name.clone() });
                 }
             }
             Stmt::Assign { target, value, .. } => {
@@ -549,6 +563,18 @@ impl<'a> HirLowering<'a> {
                 dst
             }
         }
+    }
+}
+
+fn type_ann_to_tag(ann: TypeAnnotation) -> u8 {
+    match ann {
+        TypeAnnotation::Abn => 1,
+        TypeAnnotation::Jajab => 2,
+        TypeAnnotation::Qoraal => 3,
+        TypeAnnotation::Bool => 4,
+        TypeAnnotation::Teed => 5,
+        TypeAnnotation::Walax => 6,
+        TypeAnnotation::Dynamic => 0,
     }
 }
 

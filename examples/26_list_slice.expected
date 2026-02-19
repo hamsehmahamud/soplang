@@ -15,3 +15,13 @@ Out of range indices:
   magacyo.jar(10, 20): []
   magacyo.jar(-10, 2): [Axmed, Barwaaqo]
 Edge cases:
+  magacyo.jar(3, 1): []
+  magacyo.jar(0, magacyo.dherer()): [Axmed, Barwaaqo, Cali, Deeqa, Ergada]
+  Is it a new list (not the same reference)? been
+Practical example: pagination
+  Items per page: 3
+  Page 3: [7, 8, 9]
+Working with different data types:
+  Mixed list: [10, Somali, run, [1, 2], {name: Soplang}]
+  mixed.jar(1, 4): [Somali, run, [1, 2]]
+List slice tests completed!
