@@ -21,7 +21,7 @@ for example in $examples; do
     echo "Running example: $example"
     echo "====================================================="
     # Add --no-interactive if available to prevent input prompts from blocking
-    python main.py $example || echo "Failed to run $example"
+    ./target/release/soplang $example || echo "Failed to run $example"
     echo ""
     echo "Press Enter to continue to the next example..."
     read

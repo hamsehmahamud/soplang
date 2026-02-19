@@ -4,7 +4,7 @@
 
 Soplang is a programming language with syntax inspired by Somali, making programming more accessible to Somali speakers. It combines static and dynamic typing in one language with a focus on clarity and ease of use.
 
-**The primary implementation is in Rust.** The Python→Rust migration is complete. Soplang now runs through a compiled pipeline by default: Cranelift JIT for `run` and an AOT build path for standalone binaries. See [COMPILER_PLAN.md](COMPILER_PLAN.md).
+**The implementation is in Rust.** Soplang runs through a compiled pipeline: Cranelift JIT for `run` and an AOT build path for standalone binaries. See [COMPILER_PLAN.md](COMPILER_PLAN.md).
 
 ## Project structure
 
@@ -13,8 +13,7 @@ Soplang is a programming language with syntax inspired by Somali, making program
 | **src/** | Rust implementation: lexer, parser, semantic, HIR, runtime, Cranelift JIT, and AOT build backend. |
 | **examples/** | Soplang example programs (`.sop` files). |
 | **benchmarks/** | Benchmark programs and [RESULTS.md](benchmarks/RESULTS.md). |
-| **psrc/** | Python reference implementation (legacy). See [psrc/README.md](psrc/README.md). |
-| **csrc/** | C reference implementation. |
+| **legacy-interpreter/** | Legacy interpreter code, now in the separate repo [`soplang/soplang-interpreter`](https://github.com/soplang/soplang-interpreter). |
 | **docs/** | Documentation (installation, language reference, contributing). |
 | **windows/**, **linux/**, **macos/** | Platform-specific build and packaging scripts. |
 
@@ -80,18 +79,15 @@ Runtime performance is benchmarked with [Criterion](https://github.com/bheisler/
 | list ops 5k elements | ~2.5 ms |
 | object create 2k | ~1.8 ms |
 
-Details and Rust vs Python comparison: [benchmarks/RESULTS.md](benchmarks/RESULTS.md) and [benchmarks/HYPERFINE.md](benchmarks/HYPERFINE.md).
+Details: [benchmarks/RESULTS.md](benchmarks/RESULTS.md).
 
-## Legacy — psrc (Python)
+## Legacy interpreter
 
-The Python implementation in `psrc/` is kept for reference:
+The legacy tree‑walking interpreter has been moved to a dedicated repository:
 
-```bash
-pip install -e .
-python -m psrc examples/hello.sop
-```
+- [`soplang/soplang-interpreter`](https://github.com/soplang/soplang-interpreter)
 
-See [psrc/README.md](psrc/README.md).
+All new development (compiler, JIT, AOT, CLI) happens here in the Rust implementation.
 
 ## Documentation
 

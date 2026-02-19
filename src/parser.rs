@@ -1,5 +1,5 @@
 //! Recursive descent parser: tokens → AST (Vec<Stmt>).
-//! Matches psrc/core/parser.py and IMPLEMENTATION_PLAN Phase 2.
+//! Parser for Soplang. IMPLEMENTATION_PLAN Phase 2.
 
 use crate::ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
 use crate::error::{parser_error, SoplangError};

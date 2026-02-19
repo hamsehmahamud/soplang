@@ -1,5 +1,5 @@
 //! Token types and Token struct for the Soplang lexer.
-//! Matches psrc/core/tokens.py and psrc/core/lexer.py KEYWORDS.
+//! Token types and keywords for Soplang.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {

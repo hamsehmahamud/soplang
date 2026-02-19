@@ -28,23 +28,24 @@ For the fastest way to get started:
 - [Verifying Your Installation](#verifying-your-installation)
 - [Next Steps](#next-steps)
 
-## Universal Installation Method
+## Universal Installation Method (Rust)
 
-The easiest way to build Soplang on any platform is to use the universal build script:
+The primary way to build Soplang is via Cargo:
 
 ```bash
 # Clone the repository
 git clone https://github.com/sharafdin/soplang.git
 cd soplang
 
-# Make the script executable (Unix systems)
-chmod +x build.sh
+# Build release binary
+cargo build --release
 
-# Run the script
-./build.sh
+# Run Soplang
+./target/release/soplang examples/hello.sop
+./target/release/soplang -i   # Interactive REPL
 ```
 
-This script automatically detects your platform (Windows, Linux, or macOS) and runs the appropriate build script.
+**Prerequisites:** [Rust toolchain](https://rustup.rs/) (rustc, cargo).
 
 ## Windows Installation
 
@@ -66,9 +67,10 @@ After installation, you can:
 
 #### Prerequisites
 
-- Python 3.6 or higher - [Download Python](https://www.python.org/downloads/windows/)
-- Inno Setup 6 (for creating the installer) - [Download Inno Setup](https://jrsoftware.org/isdl.php)
+- [Rust toolchain](https://rustup.rs/) (rustc, cargo)
 - Git - [Download Git](https://git-scm.com/download/win)
+
+For creating Windows installers, you may also need Inno Setup 6 and platform-specific packaging scripts.
 
 #### Build Steps
 
@@ -78,28 +80,20 @@ After installation, you can:
    cd soplang/windows
    ```
 
-2. Run the build script (PowerShell recommended):
+2. Build with Cargo:
    ```powershell
-   .\build_windows.ps1
+   cargo build --release
    ```
 
-   Or using Command Prompt:
-   ```cmd
-   build_windows.bat
-   ```
-
-3. After the build completes, you'll find:
-   - Standalone executable: `dist\soplang\soplang.exe`
-   - Windows installer: `windows\Output\soplang-setup.exe`
+3. The binary will be at:
+   - `target\release\soplang.exe`
 
 4. Run the installer to install Soplang on your system.
 
 ### Troubleshooting Windows Installation
 
-- **Missing Python**: Ensure Python is installed and added to PATH
-- **Missing dependencies**: Run `pip install -r windows\requirements_windows.txt`
-- **Inno Setup errors**: Ensure Inno Setup 6 is installed properly
-- **PyInstaller errors**: Try `pip install --upgrade pyinstaller`
+- **Missing Rust**: Install via [rustup.rs](https://rustup.rs/)
+- **Build errors**: Ensure `cargo build --release` completes; check for missing Visual Studio Build Tools on Windows
 - **"Publisher: Unknown" warning**: This is normal if the installer isn't digitally signed
 - **File association issues**: Ensure you selected the file association option during installation
 
@@ -135,10 +129,10 @@ sudo rpm -i soplang-<version>.x86_64.rpm
 1. Install Python 3.6 or higher:
    ```bash
    # Debian/Ubuntu
-   sudo apt install python3 python3-pip python3-venv
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
    # Fedora/RHEL
-   sudo dnf install python3 python3-pip
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
 2. Install ImageMagick (for icon conversion):
@@ -186,8 +180,7 @@ sudo rpm -i soplang-<version>.x86_64.rpm
 
 ### Troubleshooting Linux Installation
 
-- **Missing Python**: Ensure Python 3.6+ is installed with `python3 --version`
-- **Missing dependencies**: Run `pip3 install -r linux/requirements_linux.txt`
+- **Missing Rust**: Run `rustc --version` and `cargo --version`; install via rustup if needed
 - **Permission issues**: Make sure scripts are executable with `chmod +x *.sh`
 - **Package conflicts**: On Debian/Ubuntu, try `sudo apt --fix-broken install`
 - **Executable not found**: Ensure Soplang is in your PATH or try running `/usr/bin/soplang`
@@ -213,10 +206,7 @@ After installation, you can:
 1. Install Python 3.6 or higher:
    ```bash
    # Using Homebrew (recommended)
-   brew install python
-
-   # Or download from Python.org
-   # https://www.python.org/downloads/mac-osx/
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
 
 2. Install create-dmg (optional, for creating disk image):
@@ -250,7 +240,7 @@ After installation, you can:
 
 ### Troubleshooting macOS Installation
 
-- **Build errors**: Make sure Python 3.6+ and pip are properly installed
+- **Build errors**: Make sure Rust is installed (`rustc --version`)
 - **Icon creation fails**: Ensure you're using a high-quality source image
 - **App won't open**: Check Console.app for logs about why the app was prevented from opening
 - **"App is damaged"**: This is a security feature of macOS. Open System Preferences → Security & Privacy and click "Open Anyway" for Soplang

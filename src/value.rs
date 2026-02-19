@@ -1,4 +1,4 @@
-//! Runtime values for Soplang. Matches Python types used in psrc/runtime/interpreter.py.
+//! Runtime values for Soplang.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -166,7 +166,7 @@ impl fmt::Display for Value {
     }
 }
 
-/// String conversion matching Python qoraal() for stdlib and qor (Phase 5).
+/// String conversion for stdlib and qor.
 pub fn value_to_string(v: &Value) -> String {
     match v {
         Value::Bool(true) => "run".to_string(),

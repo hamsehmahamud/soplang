@@ -1,5 +1,5 @@
 //! Character-by-character lexer for Soplang source.
-//! Matches psrc/core/lexer.py behaviour.
+//! Lexer for Soplang.
 
 use std::iter::Peekable;
 use std::str::Chars;

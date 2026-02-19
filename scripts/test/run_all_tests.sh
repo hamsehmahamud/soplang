@@ -26,7 +26,7 @@ TEST_FILES=(
 for test_file in "${TEST_FILES[@]}"; do
     if [ -f "$test_file" ]; then
         echo "=== Running $test_file ==="
-        python main.py "$test_file"
+        ./target/release/soplang "$test_file"
         echo
         echo "=== Test Complete: $test_file ==="
         echo "Press Enter to continue to the next test..."

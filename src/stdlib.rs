@@ -1,5 +1,5 @@
 //! Standard library: built-in functions and method dispatch (Phase 5).
-//! Matches psrc/stdlib/builtins.py for byte-identical output.
+//! Built-in functions and methods for Soplang.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -75,7 +75,7 @@ pub fn builtin_qoraal(args: Vec<Value>) -> Result<Value, SoplangError> {
     Ok(Value::Str(value_to_string(&v)))
 }
 
-/// Built-in bool: truthiness (Python: 0, "", False, None, "false", "False" -> false).
+/// Built-in bool: truthiness (0, "", false, null, "false", "False" -> false).
 pub fn builtin_bool(args: Vec<Value>) -> Result<Value, SoplangError> {
     let v = args.into_iter().next().unwrap_or(Value::Null);
     let b = match &v {

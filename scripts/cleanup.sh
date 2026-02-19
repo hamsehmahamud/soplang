@@ -18,12 +18,8 @@ echo -e "${YELLOW}Creating legacy directory...${NC}"
 mkdir -p legacy/scripts
 
 # List of scripts that are now redundant with the platform-specific build system
-REDUNDANT_SCRIPTS=(
-  "soplang_c.sh"
-  "soplang_py.sh"
-  "soplang_py_optimized"
-  "soplang_shell.sh"
-)
+# Legacy scripts (C/Python runners) have been removed
+REDUNDANT_SCRIPTS=()
 
 # Move redundant scripts to legacy directory
 for script in "${REDUNDANT_SCRIPTS[@]}"; do
@@ -54,10 +50,7 @@ Or use the universal build script:
 
 ## Script Descriptions
 
-- `soplang_c.sh` - Runner script for the C implementation
-- `soplang_py.sh` - Runner script for the Python implementation
-- `soplang_py_optimized` - Runner script for the optimized Python implementation
-- `soplang_shell.sh` - Runner script for the interactive shell
+Legacy C and Python runner scripts have been removed. Use `./target/release/soplang`. See soplang/soplang-interpreter for the legacy interpreter.
 EOF
 
 echo -e "${GREEN}Cleanup complete!${NC}"

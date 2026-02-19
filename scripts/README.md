@@ -4,10 +4,7 @@ This directory contains utility scripts for Soplang development, testing, and be
 
 ## Directory Structure
 
-- **benchmark/** - Scripts for performance testing and comparison
-  - `benchmark.sh` - Basic performance benchmarking
-  - `compare_all_implementations.sh` - Compare C, Python, and interpreted implementations
-  - `compare_performance.sh` - Detailed performance metrics
+- **benchmark/** - Scripts for performance testing (see `benchmarks/` in project root for Criterion benchmarks)
 
 - **test/** - Test runner scripts
   - `run_all_tests.sh` - Run the full test suite
@@ -36,8 +33,7 @@ This script will automatically detect your platform and run the appropriate buil
 
 The following legacy build scripts are kept for reference:
 
-- `build_soplang.sh` - Builds Soplang with Nuitka for both Windows and Unix platforms
-- `compile_c_version.sh` - Compiles the C implementation
-- `compile_python_version.sh` - Compiles the Python implementation with PyInstaller
+- `build_soplang.sh` - Builds Soplang for Windows and Unix platforms
+- `compile_c_version.sh` - Compiles the C implementation (legacy; C implementation moved to soplang-interpreter repo)
 
-These scripts are not actively maintained and may not be compatible with the latest Soplang structure.
+These scripts are not actively maintained. Use `cargo build --release` for the primary Rust implementation.

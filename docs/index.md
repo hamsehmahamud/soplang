@@ -2,7 +2,7 @@
 
 Soplang is the Somali programming language, designed to make programming accessible to Somali speakers worldwide.
 
-**Primary implementation:** Rust (at project root). The Python→Rust migration is complete. We are now building the **compiler** (Cranelift JIT + LLVM AOT); see [COMPILER_PLAN.md](../COMPILER_PLAN.md) in the repo root.
+**Implementation:** Rust (at project root). The **compiler** (Cranelift JIT + LLVM AOT) is in progress; see [COMPILER_PLAN.md](../COMPILER_PLAN.md) in the repo root.
 
 ## Documentation Sections
 
@@ -25,7 +25,6 @@ Soplang is the Somali programming language, designed to make programming accessi
 
 ### Architecture & Internals
 - [Compiler Plan](../COMPILER_PLAN.md) - Cranelift JIT + LLVM AOT (Rust, in progress)
-- [Python Implementation Architecture](architecture/PYTHON_ARCHITECTURE.md) - High-level design of the Python reference implementation (legacy)
 
 ### Testing
 - [Testing Guide](testing/TESTING.md) - How to test Soplang
@@ -56,8 +55,6 @@ cargo build --release
 ```
 
 Or use the Makefile: `make build`, `make run FILE=examples/hello.sop`, `make shell`.
-
-**Legacy (Python):** `pip install -e .` then `python -m psrc examples/hello.sop` or `python main.py examples/hello.sop`. See [psrc/README.md](../psrc/README.md).
 
 ## Further Resources
 

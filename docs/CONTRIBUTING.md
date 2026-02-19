@@ -28,14 +28,14 @@ Using Docker provides a consistent development environment for all contributors 
 
 4. **Run commands inside the container**:
    ```bash
-   # Run the shell
-   docker-compose exec soplang python main.py
+   # Run the shell (REPL)
+   docker-compose exec soplang soplang -i
 
    # Run a Soplang file
-   docker-compose exec soplang python main.py examples/hello_world.so
+   docker-compose exec soplang soplang examples/hello.sop
 
    # Run tests
-   docker-compose exec soplang python -m unittest discover tests
+   docker-compose exec soplang cargo test
    ```
 
 5. **Stop the container when done**:
@@ -49,7 +49,7 @@ If you prefer working on your local machine:
 
 #### Prerequisites
 
-- Python 3.6 or higher
+- [Rust toolchain](https://rustup.rs/) (rustc, cargo)
 - Git
 - A text editor or IDE
 
@@ -61,15 +61,14 @@ If you prefer working on your local machine:
    cd soplang
    ```
 
-2. **Create a virtual environment** (optional but recommended):
+2. **Build the project**:
    ```bash
-   python -m venv env
-   source env/bin/activate  # On Windows: env\Scripts\activate
+   cargo build --release
    ```
 
-3. **Install development dependencies**:
+3. **Run tests**:
    ```bash
-   pip install -r requirements-dev.txt  # If available
+   cargo test
    ```
 
 ### Using the Makefile
@@ -84,17 +83,14 @@ We provide a Makefile to simplify common development tasks. To use it, you need:
 #### Common Commands
 
 ```bash
-# Install all dependencies
-make install
+# Build release binary
+make build
 
 # Run tests
 make test
 
-# Format code
-make format
-
-# Run linting
-make lint
+# Run benchmarks
+make bench
 
 # Run pre-commit hooks on all files
 make precommit
@@ -123,7 +119,7 @@ Use `make help` to see all available commands and their descriptions.
    ```bash
    make test
    # or the traditional way
-   python -m unittest discover tests
+   cargo test
    ```
 
 5. **Update documentation** if necessary.
@@ -137,7 +133,7 @@ Use `make help` to see all available commands and their descriptions.
 
 ## Coding Guidelines
 
-- Follow PEP 8 style guidelines for Python code
+- Follow standard Rust style (`cargo fmt`)
 - Write docstrings for all functions, classes, and modules
 - Maintain consistent error messages in Somali language
 - Add appropriate tests for new features and bug fixes
@@ -148,7 +144,7 @@ We use pre-commit hooks to ensure code quality and consistency. To set up pre-co
 
 1. **Install pre-commit**:
    ```bash
-   pip install pre-commit
+   pip install pre-commit   # pre-commit is a Python tool for running hooks
    # or using Make
    make install-dev
    ```
@@ -187,7 +183,7 @@ Run tests using:
 ```bash
 make test
 # or
-python -m unittest discover tests
+cargo test
 ```
 
 ## Documentation

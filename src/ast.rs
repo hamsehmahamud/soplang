@@ -1,5 +1,4 @@
-//! Typed AST for Soplang. Replaces Python's generic ASTNode with Expr/Stmt enums.
-//! Matches psrc/core/ast.py and IMPLEMENTATION_PLAN Phase 2.
+//! Typed AST for Soplang. Expr/Stmt enums. IMPLEMENTATION_PLAN Phase 2.
 
 use std::fmt;
 

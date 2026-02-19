@@ -52,7 +52,7 @@ if [ ! -f "$BUILD_SCRIPT" ]; then
     echo -e "${YELLOW}If you're experiencing issues with the new build system, you can try the legacy scripts:${NC}"
     echo -e "  - ${YELLOW}scripts/build/build_soplang.sh${NC} (for all platforms)"
     echo -e "  - ${YELLOW}scripts/build/compile_c_version.sh${NC} (for C implementation)"
-    echo -e "  - ${YELLOW}scripts/build/compile_python_version.sh${NC} (for Python implementation)"
+    echo -e "  - ${YELLOW}cargo build --release${NC} (primary Rust build)"
     exit 1
 fi
 

@@ -1,4 +1,4 @@
-//! Scoped environment for variables. Matches flat-dict + copy-on-call in psrc; parent chain for Phase 4.
+//! Scoped environment for variables.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};

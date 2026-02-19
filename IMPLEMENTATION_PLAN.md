@@ -1,8 +1,8 @@
 # Soplang Rust Implementation Plan
 
-> Step-by-step execution plan for rewriting Soplang in Rust. Each phase is self-contained and produces a verifiable deliverable. The Python implementation in `psrc/` serves as the reference throughout.
+> Step-by-step execution plan for rewriting Soplang in Rust. Each phase is self-contained and produces a verifiable deliverable. (The legacy Python implementation has been moved to [soplang/soplang-interpreter](https://github.com/soplang/soplang-interpreter).)
 
-**Status: Phases 1–7 complete.** The Rust implementation (lexer, parser, interpreter, stdlib, REPL, CLI, tests, benchmarks) is the primary runtime. The Python→Rust migration is done. **Compiler work** (Cranelift JIT + LLVM AOT) is in **[COMPILER_PLAN.md](COMPILER_PLAN.md)**.
+**Status: Phases 1–7 complete.** The Rust implementation (lexer, parser, stdlib, REPL, CLI, tests, benchmarks, Cranelift JIT, AOT) is the runtime. **Compiler work** continues in **[COMPILER_PLAN.md](COMPILER_PLAN.md)**.
 
 ---
 
@@ -27,10 +27,10 @@
 ## Goals
 
 - Produce a **single native binary** (`soplang`) that runs `.sop` files and provides an interactive REPL
-- Be **100% feature-compatible** with the Python implementation — every `.sop` example must produce byte-identical output
-- Improve performance (target: 10–50× faster than Python for compute-heavy programs)
+- Be **100% feature-compatible** — every `.sop` example must produce correct output
+- Improve performance for compute-heavy programs
 - Improve error messages with coloured, line-highlighted output
-- Use the **project root** as the Rust crate; all Rust source lives in `src/` at root alongside `csrc/` and `psrc/`
+- Use the **project root** as the Rust crate; all Rust source lives in `src/` at root
 
 ---
 
@@ -58,8 +58,6 @@ soplang/                 ← Rust project root (Cargo.toml here)
 │   ├── parser_tests.rs
 │   ├── interpreter_tests.rs
 │   └── examples_tests.rs
-├── csrc/                ← C reference implementation
-├── psrc/                ← Python reference implementation
 ├── examples/            ← shared .sop example files
 ├── docs/
 ├── ANALYSIS.md
