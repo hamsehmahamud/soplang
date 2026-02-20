@@ -1,6 +1,6 @@
 # Running examples and building binaries
 
-This guide describes two ways to run Soplang example programs: **run with Soplang** (JIT) and **build a standalone binary** (AOT). Built binaries go in the **`apps/`** folder at the project root.
+This guide describes two ways to run Soplang example programs: **run with Soplang** (JIT) and **build a standalone binary** (AOT). Built binaries go in the **`barnaamij/`** folder at the project root (barnaamij = program(s) in Somali).
 
 ## Prerequisites
 
@@ -62,51 +62,43 @@ With no arguments, Soplang starts the **interactive REPL** (history in `~/.sopla
 
 ## 2. Build a standalone binary (AOT)
 
-Build a native executable from a `.sop` file. Output goes in **`apps/`** at the project root.
+Build a native executable from a `.sop` file. Just run `--build`; the binary is written to **`barnaamij/`** (created automatically). Use `-o <path>` to override.
 
 AOT uses a fixed workspace under `target/soplang_aot_runner/`, so the **first** `--build` compiles Soplang and its dependencies there; **later** builds only recompile the small runner and are much faster.
 
-### Create apps folder (once)
+### Build one example
 
 ```bash
-mkdir -p apps
-```
-
-### Build one example into apps/
-
-```bash
-./target/release/soplang --build examples/01_hello.sop -o apps/01_hello
-./apps/01_hello
+./target/release/soplang --build examples/01_hello.sop
+./barnaamij/01_hello
 ```
 
 ### Build with optimization level
 
 ```bash
-./target/release/soplang --build examples/01_hello.sop -o apps/01_hello --opt-level 3
+./target/release/soplang --build examples/01_hello.sop --opt-level 3
 ```
 
 `--opt-level` can be 0, 1, 2, or 3 (default is 2).
 
-### Build all examples into apps/
+### Build all examples
 
 ```bash
-mkdir -p apps
 for f in examples/*.sop; do
-  name=$(basename "$f" .sop)
-  echo "Building $name ..."
-  ./target/release/soplang --build "$f" -o "apps/$name" 2>&1 || true
+  echo "Building $(basename "$f" .sop) ..."
+  ./target/release/soplang --build "$f" 2>&1 || true
 done
 ```
 
 Then run any of them:
 
 ```bash
-./apps/01_hello
-./apps/02_variables
-./apps/13_input   # will read from stdin when you run it
+./barnaamij/01_hello
+./barnaamij/02_variables
+./barnaamij/13_input   # will read from stdin when you run it
 ```
 
-**Note:** `13_input` and `14_random` use stdin / randomness; run them manually (e.g. `echo "Name" | ./apps/13_input`).
+**Note:** `13_input` and `14_random` use stdin / randomness; run them manually (e.g. `echo "Name" | ./barnaamij/13_input`).
 
 ---
 
@@ -116,12 +108,12 @@ Then run any of them:
 |------|--------|
 | Run one file (JIT) | `./target/release/soplang examples/01_hello.sop` |
 | Run with stdin | `echo "Input" \| ./target/release/soplang examples/13_input.sop` |
-| Build one binary to apps/ | `./target/release/soplang --build examples/01_hello.sop -o apps/01_hello` |
-| Run built binary | `./apps/01_hello` |
-| Build all to apps/ | `mkdir -p apps` then loop over `examples/*.sop` with `--build` and `-o apps/<name>` |
+| Build one binary (default: barnaamij/) | `./target/release/soplang --build examples/01_hello.sop` |
+| Run built binary | `./barnaamij/01_hello` |
+| Build all to barnaamij/ | Loop over `examples/*.sop` with `--build` (output goes to barnaamij/ by default) |
 | REPL | `./target/release/soplang` (no args); `/caawii` = help, `/bixi` = exit |
 | One-liner (with result) | `./target/release/soplang -c '1+2'` → prints `3` |
 | Quiet build | `--build ... -q` to skip "Waa la dhisay" message |
 | No color | `--no-color` or set `NO_COLOR=1` |
 
-All built executables are written to **`apps/`** in the project root.
+Built executables go to **`barnaamij/`**; the folder is created automatically. Use `-o <path>` to write elsewhere.

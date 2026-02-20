@@ -28,7 +28,8 @@ test_compilation.c
 *.swo
 
 # Soplang specific
-.soplang_history 
+.soplang_history
+barnaamij/ 
 
 # macOS
 .DS_Store

@@ -1,8 +1,11 @@
 mod shell;
 
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use clap::Parser as ClapParser;
 
@@ -84,17 +87,47 @@ fn main() {
                 .and_then(|s| s.to_str())
                 .unwrap_or("a.out")
                 .to_string();
-            PathBuf::from(stem)
+            PathBuf::from("barnaamij").join(stem)
         });
-        match build_source(&source, &out, cli.opt_level, cli.strict) {
-            Ok(()) => {
-                if !cli.quiet {
-                    println!("Waa la dhisay: {}", out.display());
+        let opt_level = cli.opt_level;
+        let strict = cli.strict;
+
+        if cli.quiet {
+            match build_source(&source, &out, opt_level, strict) {
+                Ok(()) => return,
+                Err(e) => {
+                    eprintln!("{}", format_error_with_source(&e, None));
+                    process::exit(1);
                 }
+            }
+        }
+
+        let start = Instant::now();
+        let out_build = out.clone();
+        let build_handle = thread::spawn(move || build_source(&source, &out_build, opt_level, strict));
+
+        let spin = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴'];
+        let mut i = 0;
+        while !build_handle.is_finished() {
+            print!("\rBarnaamijka waa la dhisayaa {}  ", spin[i]);
+            let _ = std::io::stdout().flush();
+            i = (i + 1) % spin.len();
+            thread::sleep(Duration::from_millis(80));
+        }
+
+        let result = build_handle.join().expect("build thread panicked");
+        let elapsed = start.elapsed().as_secs_f64();
+
+        match result {
+            Ok(()) => {
+                print!("\r{: <50}\rWaa la dhisay: {} ({:.1}s)\n", "", out.display(), elapsed);
+                let _ = std::io::stdout().flush();
                 return;
             }
             Err(e) => {
-                eprintln!("{}", format_error_with_source(&e, Some(&source)));
+                print!("\r{: <50}\r", "");
+                let _ = std::io::stdout().flush();
+                eprintln!("{}", format_error_with_source(&e, None));
                 process::exit(1);
             }
         }

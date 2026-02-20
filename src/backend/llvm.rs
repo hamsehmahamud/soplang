@@ -6,7 +6,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::error::{runtime_error, SoplangError};
 
@@ -51,16 +51,35 @@ impl LlvmBackend {
         fs::write(src_dir.join("main.rs"), runner).map_err(|e| runtime_error(e.to_string(), 0, 0))?;
 
         let mut cmd = Command::new("cargo");
-        cmd.arg("build").arg("--manifest-path").arg(&cargo_toml_path);
+        cmd.arg("build")
+            .arg("--quiet")
+            .arg("--manifest-path")
+            .arg(&cargo_toml_path);
         if opt_level > 0 {
             cmd.arg("--release")
                 .env("CARGO_PROFILE_RELEASE_OPT_LEVEL", format!("{}", opt_level.min(3)));
         }
-        let status = cmd
-            .status()
-            .map_err(|e| runtime_error(format!("AOT build failed to start: {}", e), 0, 0))?;
-        if !status.success() {
-            return Err(runtime_error("AOT build failed", 0, 0));
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+        let output = cmd
+            .output()
+            .map_err(|e| runtime_error(format!("Dhisidda ma bilaabmin: {}", e), 0, 0))?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let tail = stderr
+                .lines()
+                .rev()
+                .take(25)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+                .join("\n");
+            let msg = if tail.trim().is_empty() {
+                "Dhisidda barnaamijka way fashilmay.".to_string()
+            } else {
+                format!("Dhisidda barnaamijka way fashilmay.\n\n{}", tail.trim_end())
+            };
+            return Err(runtime_error(msg, 0, 0));
         }
 
         let exe_name = if cfg!(windows) {
