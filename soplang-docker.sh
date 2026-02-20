@@ -11,7 +11,7 @@
 #   docker run --rm -it -v "$(pwd):/scripts" soplang:latest
 #
 # Run a specific file:
-#   docker run --rm -it -v "$(pwd):/scripts" soplang:latest "path/to/your/file.so"
+#   docker run --rm -it -v "$(pwd):/scripts" soplang:latest "path/to/your/file.sop"
 
 # Check if Docker image exists, if not build it
 if ! docker image inspect soplang:latest >/dev/null 2>&1; then

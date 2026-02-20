@@ -19,16 +19,15 @@ Soplang is the Somali programming language, designed to make programming accessi
 - [Test Examples](examples/TEST_EXAMPLES_README.md) - Documentation for test examples
 
 ### Building and Performance
-- [Build Guide](build/BUILD.md) - How to build Soplang from source
-- [Performance](build/PERFORMANCE.md) - Performance benchmarks and optimization techniques
-- [C Implementation](build/README_C.md) - Information about the C implementation
+- [Build Guide](BUILD_GUIDE.md) - How to build Soplang from source (Windows, macOS, Linux)
+- [Performance](../benchmarks/RESULTS.md) - Benchmark results (Criterion)
 
 ### Architecture & Internals
 - [Compiler Plan](../COMPILER_PLAN.md) - Cranelift JIT + LLVM AOT (Rust, in progress)
 
 ### Testing
-- [Testing Guide](testing/TESTING.md) - How to test Soplang
-- [Test README](testing/README-TESTS.md) - Additional test documentation
+- [Testing Guide](testing/README.md) - How to test Soplang
+- [Test Methodology](testing/TEST_METHODOLOGY.md) - Testing approach and example-based tests
 
 ## Getting Started
 

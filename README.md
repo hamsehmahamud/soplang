@@ -53,7 +53,7 @@ cargo build --release
 ./hello_aot
 ```
 
-Or: `make build`, `make run FILE=examples/hello.sop`, `make shell`, `make test-rust`, `make bench`.
+Or: `make build`, `make run FILE=examples/hello.sop`, `make shell`, `make test`, `make bench`.
 
 ### CLI notes
 
@@ -92,6 +92,7 @@ All new development (compiler, JIT, AOT, CLI) happens here in the Rust implement
 ## Documentation
 
 - [Getting started](docs/index.md)
+- [Build guide](docs/BUILD_GUIDE.md) — Build from source on Windows, macOS, and Linux
 - [Language reference](docs/language/keywords.md)
 - [Installation](docs/installation.md)
 - [Contributing](docs/CONTRIBUTING.md)

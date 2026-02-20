@@ -1,39 +1,28 @@
-# Soplang Scripts Directory
+# Soplang Scripts
 
-This directory contains utility scripts for Soplang development, testing, and benchmarking. The main build scripts have been moved to platform-specific directories (`windows/`, `linux/`, `macos/`).
+Scripts have been cleaned up. The important ones live at the project root or in `benchmarks/`.
 
-## Directory Structure
+## Build and run
 
-- **benchmark/** - Scripts for performance testing (see `benchmarks/` in project root for Criterion benchmarks)
+- **Root:** `./build.sh` — runs `cargo build --release`
+- **Root:** `./soplang-docker.sh` — build Docker image (if needed) and run Soplang in Docker (shell or a file)
+- **Benchmarks:** `benchmarks/run_benchmarks.sh` — run `cargo bench` and regenerate `benchmarks/RESULTS.md`
 
-- **test/** - Test runner scripts
-  - `run_all_tests.sh` - Run the full test suite
-  - `run_examples.sh` - Run and validate the example programs
+## Tests
 
-- **build/** - Legacy build scripts
-  - Note: These are kept for reference but the recommended build system is now in the platform-specific folders
+Use the Makefile or Cargo directly:
 
-## Platform-Specific Build Systems
-
-For building Soplang, please use the dedicated platform-specific build systems:
-
-- **Windows**: Use `windows/build_windows.ps1` or `windows/build_windows.bat`
-- **Linux**: Use `linux/build_linux.sh`
-- **macOS**: Use `macos/build_macos.sh`
-
-Or simply use the universal build script in the root directory:
-
-```
-./build.sh
+```bash
+make test
+# or
+cargo test
 ```
 
-This script will automatically detect your platform and run the appropriate build script.
+Example programs are tested automatically via `cargo test` (examples vs `.expected` files).
 
-## Legacy Build Scripts
+## Recreating scripts later
 
-The following legacy build scripts are kept for reference:
+When you need them again, the most useful to add back are:
 
-- `build_soplang.sh` - Builds Soplang for Windows and Unix platforms
-- `compile_c_version.sh` - Compiles the C implementation (legacy; C implementation moved to soplang-interpreter repo)
-
-These scripts are not actively maintained. Use `cargo build --release` for the primary Rust implementation.
+1. **Example runner** — run all `examples/*.sop` with `./target/release/soplang` (optionally non-interactive)
+2. **Platform packaging** — macOS/Linux/Windows scripts that build the Rust binary and produce installers (e.g. .dmg, .deb, .exe) when you’re ready to ship
