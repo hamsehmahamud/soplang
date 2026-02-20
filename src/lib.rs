@@ -1,34 +1,28 @@
 //! Soplang library for use by the binary and integration tests.
 
-pub mod ast;
 pub mod backend;
+pub mod cli;
 pub mod error;
+pub mod frontend;
 pub mod hir;
 pub mod runtime;
-pub mod lexer;
-pub mod parser;
-pub mod scope;
 pub mod semantic;
-pub mod stdlib;
-pub mod token;
-pub mod value;
 
-pub use ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
-pub use hir::{HirFunction, HirInstr, HirModule, HirLowering};
+pub use error::{format_error_with_source, SoplangError};
+pub use frontend::{
+    ast, lexer, parser, token, Expr, Lexer, Literal, Param, Parser, Stmt, Token, TokenType,
+    TypeAnnotation,
+};
+pub use hir::{BinOpKind, HirFunction, HirInstr, HirLowering, HirModule, UnOpKind};
+pub use runtime::Value;
 pub use semantic::{
     analyze, analyze_with_options, AnalyzeOptions, ClassMeta, FunctionMeta, Scope, SymbolTable,
     VarInfo,
 };
-pub use error::{format_error_with_source, SoplangError};
-pub use lexer::Lexer;
-pub use parser::Parser;
-pub use token::{Token, TokenType};
-pub use value::Value;
 
 use std::path::Path;
 
 /// Run source code through the compiled pipeline (semantic → HIR → Cranelift JIT).
-/// Used by the CLI and tests. Interpreter is no longer used in Phase 6.
 pub fn run_source(
     source: &str,
     _path: Option<&Path>,
@@ -59,7 +53,6 @@ pub fn run_source(
         }
         return Ok(());
     }
-    // Phase 6: always run via Cranelift JIT.
     let mut backend = backend::cranelift::CraneliftBackend::new()?;
     backend.compile_module(&hir)?;
     backend.run_main()
@@ -82,7 +75,7 @@ pub fn maybe_wrap_for_repl(source: &str) -> String {
     }
 }
 
-/// Phase 5: build a standalone executable (AOT path).
+/// Build a standalone executable (AOT path).
 pub fn build_source(
     source: &str,
     out_path: &Path,

@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use crate::ast::{Expr, Literal, Stmt, TypeAnnotation};
+use crate::frontend::ast::{Expr, Literal, Stmt, TypeAnnotation};
 use crate::semantic::{resolve_name, SymbolTable};
 
 pub type Slot = usize;

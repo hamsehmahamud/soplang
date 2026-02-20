@@ -4,9 +4,9 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use crate::ast::TypeAnnotation;
 use crate::error::{runtime_error, SoplangError};
-use crate::value::Value;
+use crate::frontend::ast::TypeAnnotation;
+use crate::runtime::value::Value;
 
 pub struct Env {
     vars:   HashMap<String, Value>,

@@ -3,8 +3,8 @@
 
 use std::collections::HashMap;
 
-use crate::ast::{Expr, Literal, Stmt, TypeAnnotation};
 use crate::error::{codes, type_error_ex, ErrorMeta, SoplangError};
+use crate::frontend::ast::{Expr, Literal, Stmt, TypeAnnotation};
 
 /// Symbol table built by semantic analysis. Used by HIR lowering.
 #[derive(Debug, Default)]

@@ -5,7 +5,7 @@ use std::fs;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
-use soplang::{format_error_with_source, maybe_wrap_for_repl, run_source};
+use crate::{format_error_with_source, maybe_wrap_for_repl, run_source};
 
 const PROMPT: &str = "soplang> ";
 const CONTINUATION_PROMPT: &str = "    ... ";

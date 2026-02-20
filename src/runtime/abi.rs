@@ -8,8 +8,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use crate::error::{runtime_error, type_error, SoplangError};
-use crate::stdlib;
-use crate::value::{value_to_string, NativeFn, Value};
+use super::stdlib;
+use super::value::{value_to_string, NativeFn, Value};
 
 fn fatal_error(e: impl std::fmt::Display) -> ! {
     use std::io::Write;
@@ -174,7 +174,7 @@ pub fn soplang_to_value(sv: SoplangValue) -> Result<Value, SoplangError> {
         TAG_STR => Ok(Value::Str(str_get(sv.payload))),
         TAG_LIST => Ok(Value::List(list_get(sv.payload))),
         TAG_OBJECT => Ok(Value::Object(obj_get(sv.payload))),
-        TAG_FUNC => Ok(Value::Function(crate::value::FunctionId(sv.payload as usize))),
+        TAG_FUNC => Ok(Value::Function(super::value::FunctionId(sv.payload as usize))),
         _ => Err(runtime_error(format!("Invalid tag {}", sv.tag), 0, 0)),
     }
 }
@@ -777,16 +777,16 @@ fn dispatch_list_method(
             }
             Ok(Value::List(Rc::new(RefCell::new(out))))
         }
-        "kasaar" => crate::stdlib::list_kasaar(Rc::clone(l), args),
-        "dherer" => crate::stdlib::list_dherer(Rc::clone(l), args),
-        "kudar"  => crate::stdlib::list_kudar(Rc::clone(l), args),
-        "leeyahay" => crate::stdlib::list_leeyahay(Rc::clone(l), args),
-        "nuqul"  => crate::stdlib::list_nuqul(Rc::clone(l), args),
-        "nadiifi" => crate::stdlib::list_nadiifi(Rc::clone(l), args),
-        "rog"    => crate::stdlib::list_rog(Rc::clone(l), args),
-        "habee"  => crate::stdlib::list_habee(Rc::clone(l), args),
-        "jar"    => crate::stdlib::list_jar(Rc::clone(l), args),
-        "muuji"  => crate::stdlib::list_muuji(Rc::clone(l), args),
+        "kasaar" => super::stdlib::list_kasaar(Rc::clone(l), args),
+        "dherer" => super::stdlib::list_dherer(Rc::clone(l), args),
+        "kudar"  => super::stdlib::list_kudar(Rc::clone(l), args),
+        "leeyahay" => super::stdlib::list_leeyahay(Rc::clone(l), args),
+        "nuqul"  => super::stdlib::list_nuqul(Rc::clone(l), args),
+        "nadiifi" => super::stdlib::list_nadiifi(Rc::clone(l), args),
+        "rog"    => super::stdlib::list_rog(Rc::clone(l), args),
+        "habee"  => super::stdlib::list_habee(Rc::clone(l), args),
+        "jar"    => super::stdlib::list_jar(Rc::clone(l), args),
+        "muuji"  => super::stdlib::list_muuji(Rc::clone(l), args),
         _ => Err(runtime_error(format!("Unknown list method: {}", method), 0, 0)),
     }
 }
@@ -797,14 +797,14 @@ fn dispatch_object_method(
     args: &[Value],
 ) -> Result<Value, SoplangError> {
     match method {
-        "fure"    => crate::stdlib::object_fure(Rc::clone(o), args),
-        "leeyahay" => crate::stdlib::object_leeyahay(Rc::clone(o), args),
-        "tir"     => crate::stdlib::object_tir(Rc::clone(o), args),
-        "kudar"   => crate::stdlib::object_kudar(Rc::clone(o), args),
-        "nuqul"   => crate::stdlib::object_nuqul(Rc::clone(o), args),
-        "nadiifi" => crate::stdlib::object_nadiifi(Rc::clone(o), args),
-        "qiime"   => crate::stdlib::object_qiime(Rc::clone(o), args),
-        "lamaane" => crate::stdlib::object_lamaane(Rc::clone(o), args),
+        "fure"    => super::stdlib::object_fure(Rc::clone(o), args),
+        "leeyahay" => super::stdlib::object_leeyahay(Rc::clone(o), args),
+        "tir"     => super::stdlib::object_tir(Rc::clone(o), args),
+        "kudar"   => super::stdlib::object_kudar(Rc::clone(o), args),
+        "nuqul"   => super::stdlib::object_nuqul(Rc::clone(o), args),
+        "nadiifi" => super::stdlib::object_nadiifi(Rc::clone(o), args),
+        "qiime"   => super::stdlib::object_qiime(Rc::clone(o), args),
+        "lamaane" => super::stdlib::object_lamaane(Rc::clone(o), args),
         _ => Err(runtime_error(format!("Unknown object method: {}", method), 0, 0)),
     }
 }
@@ -815,18 +815,18 @@ fn dispatch_string_method(
     args: &[Value],
 ) -> Result<Value, SoplangError> {
     match method {
-        "qeybi"    => crate::stdlib::string_qeybi(s.to_string(), args),
-        "leeyahay" => crate::stdlib::string_leeyahay(s.to_string(), args),
-        "dhamaad"  => crate::stdlib::string_dhamaad(s.to_string(), args),
-        "bilow"    => crate::stdlib::string_bilow(s.to_string(), args),
-        "beddel"   => crate::stdlib::string_beddel(s.to_string(), args),
-        "beddel_dhammaan" => crate::stdlib::string_beddel_dhammaan(s.to_string(), args),
-        "kudar"    => crate::stdlib::string_kudar(s.to_string(), args),
-        "jar"      => crate::stdlib::string_jar(s.to_string(), args),
-        "xarafaha_weyn"   => crate::stdlib::string_xarafaha_weyn(s.to_string(), args),
-        "xarfaha_yaryar"  => crate::stdlib::string_xarfaha_yaryar(s.to_string(), args),
-        "masax"    => crate::stdlib::string_masax(s.to_string(), args),
-        "raadi"    => crate::stdlib::string_raadi(s.to_string(), args),
+        "qeybi"    => super::stdlib::string_qeybi(s.to_string(), args),
+        "leeyahay" => super::stdlib::string_leeyahay(s.to_string(), args),
+        "dhamaad"  => super::stdlib::string_dhamaad(s.to_string(), args),
+        "bilow"    => super::stdlib::string_bilow(s.to_string(), args),
+        "beddel"   => super::stdlib::string_beddel(s.to_string(), args),
+        "beddel_dhammaan" => super::stdlib::string_beddel_dhammaan(s.to_string(), args),
+        "kudar"    => super::stdlib::string_kudar(s.to_string(), args),
+        "jar"      => super::stdlib::string_jar(s.to_string(), args),
+        "xarafaha_weyn"   => super::stdlib::string_xarafaha_weyn(s.to_string(), args),
+        "xarfaha_yaryar"  => super::stdlib::string_xarfaha_yaryar(s.to_string(), args),
+        "masax"    => super::stdlib::string_masax(s.to_string(), args),
+        "raadi"    => super::stdlib::string_raadi(s.to_string(), args),
         _ => Err(runtime_error(format!("Unknown string method: {}", method), 0, 0)),
     }
 }

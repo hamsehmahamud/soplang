@@ -1,5 +1,3 @@
-mod shell;
-
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -9,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use clap::Parser as ClapParser;
 
-use soplang::{build_source, format_error_with_source, maybe_wrap_for_repl, run_source};
+use soplang::{build_source, cli::Shell, format_error_with_source, maybe_wrap_for_repl, run_source};
 
 #[derive(ClapParser)]
 #[command(
@@ -213,7 +211,7 @@ fn main() {
 }
 
 fn run_shell(strict: bool) {
-    let mut sh = shell::Shell::new(strict);
+    let mut sh = Shell::new(strict);
     sh.run();
 }
 

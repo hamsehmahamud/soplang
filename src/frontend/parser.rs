@@ -1,9 +1,9 @@
 //! Recursive descent parser: tokens → AST (Vec<Stmt>).
 //! Parser for Soplang. IMPLEMENTATION_PLAN Phase 2.
 
-use crate::ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
 use crate::error::{parser_error, SoplangError};
-use crate::token::{Token, TokenType};
+use super::ast::{Expr, Literal, Param, Stmt, TypeAnnotation};
+use super::token::{Token, TokenType};
 
 pub struct Parser {
     tokens:  Vec<Token>,
@@ -916,8 +916,8 @@ fn token_name_expected(k: &TokenType) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::Parser;
-    use crate::ast::{Expr, Literal, Stmt};
-    use crate::lexer::Lexer;
+    use crate::frontend::ast::{Expr, Literal, Stmt};
+    use crate::frontend::lexer::Lexer;
 
     #[test]
     fn parse_hello() {

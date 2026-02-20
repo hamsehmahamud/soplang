@@ -7,7 +7,7 @@ use std::io::{self, Write};
 use std::rc::Rc;
 
 use crate::error::{runtime_error, type_error, SoplangError};
-use crate::value::{value_to_string, Value};
+use super::value::{value_to_string, Value};
 
 fn err_type(msg: impl Into<String>) -> SoplangError {
     type_error(msg, 0, 0)
