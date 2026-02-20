@@ -12,18 +12,99 @@ cargo build --release 2>&1
 
 echo ""
 echo "Running criterion benchmarks..."
-BENCH_OUTPUT=$(cargo bench 2>&1) || true
+BENCH_LOG=$(mktemp)
+trap 'rm -f "$BENCH_LOG"' EXIT
+cargo bench 2>&1 | tee "$BENCH_LOG" || true
 
 echo ""
-echo "Generating $RESULTS_FILE ..."
+echo "Generating formatted $RESULTS_FILE ..."
 
 TIMESTAMP=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
 RUSTC_VERSION=$(rustc --version)
 CARGO_VERSION=$(cargo --version)
 UNAME_INFO=$(uname -srm)
 
-cat > "$RESULTS_FILE" <<HEADER
-# Soplang Interpreter Benchmarks
+# Parse criterion output from the log file (avoids ARG_MAX when output is huge).
+# For each "time: [ low mean high unit ]" capture benchmark name and values.
+# Skip "comparison/soplang/*" so we keep one row per benchmark.
+parse_criterion() {
+  awk '
+    BEGIN { last_bench = "" }
+    /Benchmarking [^:]+: Analyzing/ {
+      if (match($0, /Benchmarking [^:]+: Analyzing/)) {
+        # name is between "Benchmarking " and ": Analyzing"
+        s = substr($0, RSTART + 13, RLENGTH - 25)
+        if (s != "") last_bench = s
+      }
+    }
+    /time:[[:space:]]*\[/ {
+      name = last_bench
+      if (match($0, /[a-z0-9_]+\/[a-z0-9_x]+/)) name = substr($0, RSTART, RLENGTH)
+      if (name ~ /^comparison\//) next
+      # Criterion format: [ 45.791 ms 47.145 ms 48.808 ms ] or [45.791 ms ...] (low unit mean unit high unit)
+      if (match($0, /\[[[:space:]]*[0-9.]+[[:space:]]+[^[:space:]]+[[:space:]]+[0-9.]+[[:space:]]+[^[:space:]]+[[:space:]]+[0-9.]+[[:space:]]+[^]]+\]/)) {
+        s = substr($0, RSTART, RLENGTH)
+        gsub(/^\[[[:space:]]*|[[:space:]]*\]$/, "", s)
+        n = split(s, a, /[[:space:]]+/)
+        if (n >= 6) {
+          low = a[1]; mean = a[3]; high = a[5]; unit = a[2]
+          print name "|" mean "|" low "|" high "|" unit
+        }
+      }
+    }
+  ' "$BENCH_LOG"
+}
+
+# Build Criterion results table (main 6 benchmarks)
+criterion_table=""
+criterion_table="$criterion_table\n| Benchmark | Mean | Low | High |"
+criterion_table="$criterion_table\n|-----------|------|-----|------|"
+
+while IFS='|' read -r name mean low high unit; do
+  [ -z "$name" ] && continue
+  # Format numbers: drop trailing zeros, keep 2 decimal places when needed
+  case "$unit" in
+    *ms*) criterion_table="$criterion_table\n| $name | ${mean} ms | ${low} ms | ${high} ms |" ;;
+    *µs*|*us*) criterion_table="$criterion_table\n| $name | ${mean} µs | ${low} µs | ${high} µs |" ;;
+    *) criterion_table="$criterion_table\n| $name | ${mean} $unit | ${low} $unit | ${high} $unit |" ;;
+  esac
+done < <(parse_criterion | grep -E '^(fibonacci|loops|strings|lists|objects)/' | head -6)
+
+# Pipeline stage rows (lex_only, parse_only)
+pipeline_rows=""
+while IFS='|' read -r name mean low high unit; do
+  [ -z "$name" ] && continue
+  case "$unit" in
+    *ms*) pipeline_rows="${pipeline_rows}\n| $name | ${mean} ms | ${low} ms | ${high} ms |" ;;
+    *µs*|*us*) pipeline_rows="${pipeline_rows}\n| $name | ${mean} µs | ${low} µs | ${high} µs |" ;;
+    *) pipeline_rows="${pipeline_rows}\n| $name | ${mean} $unit | ${low} $unit | ${high} $unit |" ;;
+  esac
+done < <(parse_criterion | grep 'pipeline_stages/')
+
+# If parsing produced nothing, show a placeholder
+if [ -z "$criterion_table" ] || [ "$(echo -e "$criterion_table" | wc -l)" -le 2 ]; then
+  criterion_table="| Benchmark | Mean | Low | High |
+|-----------|------|-----|------|
+| (run \`cargo bench\` to populate) | — | — | — |"
+fi
+
+# Wall-clock timings
+WALL_TABLE="| Benchmark | Time |
+|-----------|------|"
+BINARY="$PROJECT_DIR/target/release/soplang"
+for bench_file in "$SCRIPT_DIR"/*.sop; do
+  [ -f "$bench_file" ] || continue
+  name=$(basename "$bench_file" .sop)
+  elapsed=$( { time "$BINARY" "$bench_file" > /dev/null 2>&1; } 2>&1)
+  real_time=$(echo "$elapsed" | grep -E 'real|user' | head -1 | awk '{print $2}')
+  [ -z "$real_time" ] && real_time="—"
+  WALL_TABLE="$WALL_TABLE
+| $name | $real_time |"
+done
+
+{
+  cat <<HEADER
+# Soplang Compiler Benchmarks
 
 > Auto-generated on **$TIMESTAMP**
 > System: \`$UNAME_INFO\` | \`$RUSTC_VERSION\` | \`$CARGO_VERSION\`
@@ -39,66 +120,47 @@ cat > "$RESULTS_FILE" <<HEADER
 | list_ops | List push + traversal | 5,000 elements |
 | object_create | Object allocation | 2,000 objects |
 
-## Criterion Results
+## Criterion Results (compiler — Cranelift JIT)
 
-\`\`\`
+In-process: Lex → Parse → HIR → Cranelift JIT → execute (same path as \`soplang file.sop\`).
+
 HEADER
+  echo -e "$criterion_table"
+  if [ -n "$pipeline_rows" ]; then
+    echo ""
+    echo "### Pipeline stage breakdown"
+    echo ""
+    echo "| Stage | Mean | Low | High |"
+    echo "|-------|------|-----|------|"
+    echo -e "$pipeline_rows"
+  fi
+  cat <<WALL
 
-echo "$BENCH_OUTPUT" | grep -E '(time:|Benchmarking|found|change|Performance)' >> "$RESULTS_FILE" 2>/dev/null || true
+## Quick timings (wall-clock)
 
-if echo "$BENCH_OUTPUT" | grep -q 'time:'; then
-    echo "$BENCH_OUTPUT" | grep -B1 'time:' >> "$RESULTS_FILE" 2>/dev/null || true
-else
-    echo "$BENCH_OUTPUT" >> "$RESULTS_FILE"
-fi
+$WALL_TABLE
 
-cat >> "$RESULTS_FILE" <<'FOOTER'
-```
+## How to run
 
-## Quick Timings (wall-clock)
-
-| Benchmark | Time |
-|-----------|------|
-FOOTER
-
-BINARY="$PROJECT_DIR/target/release/soplang"
-for bench_file in "$SCRIPT_DIR"/*.sop; do
-    name=$(basename "$bench_file" .sop)
-    elapsed=$( { time "$BINARY" "$bench_file" > /dev/null 2>&1; } 2>&1 )
-    real_time=$(echo "$elapsed" | grep real | awk '{print $2}')
-    if [ -z "$real_time" ]; then
-        real_time=$(echo "$elapsed" | grep -oP '[\d.]+s' | head -1)
-    fi
-    if [ -z "$real_time" ]; then
-        real_time="$elapsed"
-    fi
-    echo "| $name | $real_time |" >> "$RESULTS_FILE"
-done
-
-cat >> "$RESULTS_FILE" <<'NOTES'
-
-## How to Run
-
-```bash
-# Full criterion benchmarks (with HTML reports in target/criterion/)
+\`\`\`bash
+# Full criterion benchmarks (HTML reports in target/criterion/)
 cargo bench
 
-# Quick wall-clock timings
+# This script: benchmarks + formatted results
 bash benchmarks/run_benchmarks.sh
 
-# Single benchmark group
+# Single group
 cargo bench -- fibonacci
-```
+cargo bench -- loops
+\`\`\`
 
-## Interpreting Results
+## Notes
 
-- **Criterion** measures statistical performance: mean, median, standard deviation,
-  and detects regressions/improvements between runs.
-- **HTML reports** are generated in `target/criterion/` — open `report/index.html`
-  in a browser for detailed graphs.
-- **Wall-clock timings** include process startup overhead; criterion timings are
-  pure in-process measurements and more accurate for comparison.
-NOTES
+- **What we benchmark:** The compiler (Cranelift JIT). Same path as \`./target/release/soplang file.sop\`.
+- **Criterion** = in-process, statistical (mean, confidence intervals).
+- **HTML reports:** \`target/criterion/report/index.html\`.
+WALL
+} > "$RESULTS_FILE"
 
 echo ""
-echo "Done! Results written to $RESULTS_FILE"
+echo "Done! Formatted results written to $RESULTS_FILE"

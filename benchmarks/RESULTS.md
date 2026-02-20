@@ -1,87 +1,67 @@
-# Soplang Interpreter Benchmarks
+# Soplang Compiler Benchmarks
+
+> Auto-generated on **2026-02-20 11:07:46 UTC**
+> System: `Linux 6.18.7-arch1-1 x86_64` | `rustc 1.91.1 (ed61e7d7e 2025-11-07)` | `cargo 1.91.1 (ea2d97820 2025-10-10)`
 
 ## Benchmark Programs
 
 | Benchmark | Description | Workload |
 |-----------|-------------|----------|
-| `fib_recursive` | Recursive Fibonacci | `fib(25)` — 242,785 function calls |
-| `loop_sum` | Tight for-loop with arithmetic | Sum of 1..100,000 |
-| `nested_loops` | Nested loop dispatch | 200 x 200 = 40,804 iterations |
-| `string_concat` | String concatenation in loop | 1,000 appends |
-| `list_ops` | List push + index traversal | 5,000 elements |
-| `object_create` | Object allocation + property access | 2,000 objects |
+| fib_recursive | Recursive Fibonacci | fib(25) = 75025 |
+| loop_sum | Tight for-loop | Sum 1..100,000 |
+| nested_loops | Nested loop dispatch | 200 x 200 iterations |
+| string_concat | String concatenation | 1,000 appends |
+| list_ops | List push + traversal | 5,000 elements |
+| object_create | Object allocation | 2,000 objects |
 
-## Criterion Results (in-process, statistical)
+## Criterion Results (compiler — Cranelift JIT)
+
+In-process: Lex → Parse → HIR → Cranelift JIT → execute (same path as `soplang file.sop`).
+
 
 | Benchmark | Mean | Low | High |
 |-----------|------|-----|------|
-| **fibonacci/fib_25_full** | **282.15 ms** | 269.72 ms | 297.19 ms |
-| **loops/loop_sum_100k** | **25.10 ms** | 23.41 ms | 27.22 ms |
-| **loops/nested_loops_200x200** | **8.54 ms** | 8.35 ms | 8.84 ms |
-| **strings/string_concat_1k** | **616.93 us** | 601.98 us | 632.76 us |
-| **lists/list_ops_5k** | **2.48 ms** | 2.44 ms | 2.55 ms |
-| **objects/object_create_2k** | **1.79 ms** | 1.61 ms | 2.00 ms |
+| fibonacci/fib_25_full | 25.62 ms | 24.93 ms | 26.27 ms |
+| loops/loop_sum_100k | 9.90 ms | 9.62 ms | 10.08 ms |
+| loops/nested_loops_200x20 | 4.20 ms | 4.07 ms | 4.35 ms |
+| strings/string_concat_1 | 0.67 ms | 0.65 ms | 0.69 ms |
+| lists/list_ops_5k | 1.30 ms | 1.28 ms | 1.34 ms |
+| objects/object_create_2 | 251.69 µs | 240.42 µs | 259.04 µs |
 
-### Pipeline Stage Breakdown
+### Pipeline stage breakdown
 
-| Stage | Mean | Notes |
-|-------|------|-------|
-| Lex only (fib program) | **3.76 us** | Tokenization is near-instant |
-| Parse only (fib program) | **5.98 us** | Parsing is near-instant |
-| Full execution (fib_25) | **282.15 ms** | ~99.99% time is in interpretation |
+| Stage | Mean | Low | High |
+|-------|------|-----|------|
+| pipeline_stages/lex_onl | 1.60 µs | 1.58 µs | 1.61 µs |
+| pipeline_stages/parse_onl | 2.73 µs | 2.71 µs | 2.75 µs |
 
-> The lexer and parser are extremely fast. Virtually all time is spent in the
-> tree-walking interpreter executing the AST, which is expected for this
-> architecture.
+## Quick timings (wall-clock)
 
-## How to Run
+| Benchmark | Time |
+|-----------|------|
+| fib_recursive | 0m0.041s |
+| list_ops | 0m0.003s |
+| loop_sum | 0m0.016s |
+| nested_loops | 0m0.007s |
+| object_create | 0m0.002s |
+| string_concat | 0m0.002s |
+
+## How to run
 
 ```bash
-# Full criterion benchmarks (with HTML reports)
+# Full criterion benchmarks (HTML reports in target/criterion/)
 cargo bench
 
-# Run a specific benchmark group
+# This script: benchmarks + formatted results
+bash benchmarks/run_benchmarks.sh
+
+# Single group
 cargo bench -- fibonacci
 cargo bench -- loops
-cargo bench -- strings
-cargo bench -- pipeline_stages
-cargo bench -- comparison
-
-# Quick wall-clock timing of a single benchmark file
-time ./target/release/soplang benchmarks/fib_recursive.sop
-
-# Auto-generate this file with fresh results
-bash benchmarks/run_benchmarks.sh
 ```
 
-## Interpreting Results
+## Notes
 
-- **Criterion** runs each benchmark many times, computing mean, median, standard
-  deviation, and confidence intervals. It also detects regressions/improvements
-  between consecutive runs.
-- **HTML reports** are generated in `target/criterion/` — open
-  `target/criterion/report/index.html` in a browser for violin plots, PDFs, and
-  regression analysis.
-- The `comparison` benchmark group runs all programs side by side under identical
-  criterion settings for fair cross-benchmark comparison.
-- These are **in-process** measurements (no process startup overhead), so they are
-  more accurate than wall-clock `time` measurements for comparing interpreter
-  performance across changes.
-
-## Architecture Notes
-
-The interpreter is a **tree-walking interpreter** — it traverses the AST directly
-without compiling to bytecode. This means:
-
-- **Function calls are expensive**: each call creates a new scope, clones the
-  environment, and recursively walks the body AST. This is why `fib(25)` (~242k
-  calls) takes ~282ms.
-- **Loops are moderate**: each iteration dispatches through the AST matcher, which
-  adds overhead compared to a bytecode loop.
-- **String concat is O(n^2)**: each append creates a new string. A rope or buffer
-  strategy would improve this.
-- **Object/list allocation** is relatively fast thanks to Rust's efficient HashMap
-  and Vec implementations under the hood.
-
-Future optimizations (bytecode compilation, constant folding, tail-call optimization)
-would show up clearly in these benchmarks.
+- **What we benchmark:** The compiler (Cranelift JIT). Same path as `./target/release/soplang file.sop`.
+- **Criterion** = in-process, statistical (mean, confidence intervals).
+- **HTML reports:** `target/criterion/report/index.html`.

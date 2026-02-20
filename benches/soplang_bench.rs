@@ -1,17 +1,12 @@
 use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use soplang::{Interpreter, Lexer, Parser};
-use std::path::Path;
+use soplang::{run_source, Lexer, Parser};
 use std::time::Duration;
 
+/// Run a .sop file through the compiler pipeline (Cranelift JIT).
 fn run_file(path: &str) {
     let source = std::fs::read_to_string(path)
         .unwrap_or_else(|e| panic!("cannot read {path}: {e}"));
-    let tokens = Lexer::new(&source).tokenize().expect("lex error");
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let mut interp = Interpreter::new();
-    interp
-        .run_with_path(stmts, Some(Path::new(path)))
-        .expect("runtime error");
+    run_source(&source, None, false, false, false).expect("runtime error");
 }
 
 fn lex_only(source: &str) {
@@ -27,9 +22,9 @@ fn parse_only(source: &str) {
 
 fn bench_fibonacci(c: &mut Criterion) {
     let mut group = c.benchmark_group("fibonacci");
-    group.warm_up_time(Duration::from_secs(2));
-    group.measurement_time(Duration::from_secs(5));
-    group.sample_size(20);
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
 
     group.bench_function("fib_25_full", |b| {
         b.iter(|| run_file("benchmarks/fib_recursive.sop"))
@@ -39,9 +34,9 @@ fn bench_fibonacci(c: &mut Criterion) {
 
 fn bench_loops(c: &mut Criterion) {
     let mut group = c.benchmark_group("loops");
-    group.warm_up_time(Duration::from_secs(2));
-    group.measurement_time(Duration::from_secs(5));
-    group.sample_size(30);
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
 
     group.bench_function("loop_sum_100k", |b| {
         b.iter(|| run_file("benchmarks/loop_sum.sop"))
@@ -55,8 +50,8 @@ fn bench_loops(c: &mut Criterion) {
 fn bench_strings(c: &mut Criterion) {
     let mut group = c.benchmark_group("strings");
     group.warm_up_time(Duration::from_secs(1));
-    group.measurement_time(Duration::from_secs(5));
-    group.sample_size(30);
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
 
     group.bench_function("string_concat_1k", |b| {
         b.iter(|| run_file("benchmarks/string_concat.sop"))
@@ -67,8 +62,8 @@ fn bench_strings(c: &mut Criterion) {
 fn bench_lists(c: &mut Criterion) {
     let mut group = c.benchmark_group("lists");
     group.warm_up_time(Duration::from_secs(1));
-    group.measurement_time(Duration::from_secs(5));
-    group.sample_size(30);
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
 
     group.bench_function("list_ops_5k", |b| {
         b.iter(|| run_file("benchmarks/list_ops.sop"))
@@ -79,8 +74,8 @@ fn bench_lists(c: &mut Criterion) {
 fn bench_objects(c: &mut Criterion) {
     let mut group = c.benchmark_group("objects");
     group.warm_up_time(Duration::from_secs(1));
-    group.measurement_time(Duration::from_secs(5));
-    group.sample_size(30);
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
 
     group.bench_function("object_create_2k", |b| {
         b.iter(|| run_file("benchmarks/object_create.sop"))
@@ -91,8 +86,8 @@ fn bench_objects(c: &mut Criterion) {
 fn bench_pipeline(c: &mut Criterion) {
     let source = std::fs::read_to_string("benchmarks/fib_recursive.sop").unwrap();
     let mut group = c.benchmark_group("pipeline_stages");
-    group.warm_up_time(Duration::from_secs(1));
-    group.measurement_time(Duration::from_secs(3));
+    group.warm_up_time(Duration::from_millis(500));
+    group.measurement_time(Duration::from_secs(1));
 
     group.bench_function("lex_only", |b| b.iter(|| lex_only(&source)));
     group.bench_function("parse_only", |b| b.iter(|| parse_only(&source)));
@@ -102,9 +97,9 @@ fn bench_pipeline(c: &mut Criterion) {
 
 fn bench_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("comparison");
-    group.warm_up_time(Duration::from_secs(2));
-    group.measurement_time(Duration::from_secs(5));
-    group.sample_size(20);
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(10);
 
     let benchmarks = [
         ("fib_recursive", "benchmarks/fib_recursive.sop"),
