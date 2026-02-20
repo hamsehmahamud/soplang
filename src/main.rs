@@ -6,19 +6,27 @@ use std::process;
 
 use clap::Parser as ClapParser;
 
-use soplang::{build_source, format_error_with_source, run_source};
+use soplang::{build_source, format_error_with_source, maybe_wrap_for_repl, run_source};
 
 #[derive(ClapParser)]
-#[command(name = "soplang", about = "The Somali Programming Language", version)]
+#[command(
+    name = "soplang",
+    about = "The Somali Programming Language",
+    version,
+    after_help = "With no arguments, starts the interactive REPL.\n  Use -i after a file/example to run it then continue in the REPL."
+)]
 struct Cli {
-    #[arg(long, help = "Build .sop file into standalone executable (AOT)")]
-    build: Option<PathBuf>,
+    #[arg(long, help = "Build .sop file into standalone executable (AOT); requires FILENAME")]
+    build: bool,
 
     #[arg(short = 'o', long, help = "Output binary path (used with --build)")]
     output: Option<PathBuf>,
 
     #[arg(long, default_value_t = 2, help = "AOT optimization level: 0..3 (used with --build)")]
     opt_level: u8,
+
+    #[arg(short, long, help = "Quiet: no build success message (used with --build)")]
+    quiet: bool,
 
     #[arg(short, long, help = "Execute code snippet and exit")]
     command: Option<String>,
@@ -29,10 +37,10 @@ struct Cli {
     #[arg(short, long, help = "Run example N from examples/ (1-based)")]
     example: Option<usize>,
 
-    #[arg(short, long, help = "Open interactive shell after running file/example")]
+    #[arg(short, long, help = "After running file/example, open interactive REPL")]
     interactive: bool,
 
-    #[arg(help = "Path to .sop file")]
+    #[arg(help = "Path to .sop file (to run, or to build when using --build; omit to start REPL)")]
     filename: Option<PathBuf>,
 
     #[arg(long, help = "Print AST instead of executing")]
@@ -43,13 +51,27 @@ struct Cli {
 
     #[arg(long, help = "Enable strict static type mode")]
     strict: bool,
+
+    #[arg(long, help = "Disable colored error output (same as NO_COLOR=1)")]
+    no_color: bool,
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    if let Some(path) = &cli.build {
-        let source = match fs::read_to_string(path) {
+    if cli.no_color {
+        std::env::set_var("NO_COLOR", "1");
+    }
+
+    if cli.build {
+        let path = match &cli.filename {
+            Some(p) => p.clone(),
+            None => {
+                eprintln!("Khalad: --build waa in la bixiyo fayl: soplang --build <fayl.sop> [-o <output>] [-q]");
+                process::exit(1);
+            }
+        };
+        let source = match fs::read_to_string(&path) {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("Khalad: Ma akhriyin faylka '{}': {}", path.display(), e);
@@ -66,7 +88,9 @@ fn main() {
         });
         match build_source(&source, &out, cli.opt_level, cli.strict) {
             Ok(()) => {
-                println!("Waa la dhisay: {}", out.display());
+                if !cli.quiet {
+                    println!("Waa la dhisay: {}", out.display());
+                }
                 return;
             }
             Err(e) => {
@@ -80,7 +104,7 @@ fn main() {
         match run_source(&source, Some(&path), cli.ast, cli.hir, cli.strict) {
             Ok(()) => {
                 if cli.interactive {
-                    run_shell();
+                    run_shell(cli.strict);
                 }
             }
             Err(e) => {
@@ -91,7 +115,8 @@ fn main() {
     };
 
     if let Some(code) = &cli.command {
-        match run_source(code, None, false, false, cli.strict) {
+        let to_run = maybe_wrap_for_repl(code);
+        match run_source(&to_run, None, false, false, cli.strict) {
             Ok(()) => process::exit(0),
             Err(e) => {
                 eprintln!("{}", format_error_with_source(&e, Some(code)));
@@ -140,7 +165,7 @@ fn main() {
         match run_source(&source, Some(path.as_path()), cli.ast, cli.hir, cli.strict) {
             Ok(()) => {
                 if cli.interactive {
-                    run_shell();
+                    run_shell(cli.strict);
                 }
             }
             Err(e) => {
@@ -151,11 +176,11 @@ fn main() {
         return;
     }
 
-    run_shell();
+    run_shell(cli.strict);
 }
 
-fn run_shell() {
-    let mut sh = shell::Shell::new();
+fn run_shell(strict: bool) {
+    let mut sh = shell::Shell::new(strict);
     sh.run();
 }
 

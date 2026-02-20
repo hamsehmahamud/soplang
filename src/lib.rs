@@ -65,6 +65,23 @@ pub fn run_source(
     backend.run_main()
 }
 
+/// For REPL and -c: if source is a single expression (not already qor(...)), wrap in qor(...) so the value is printed.
+pub fn maybe_wrap_for_repl(source: &str) -> String {
+    let tokens = match Lexer::new(source).tokenize() {
+        Ok(t) => t,
+        Err(_) => return source.to_string(),
+    };
+    let mut parser = Parser::new(tokens);
+    let expr = match parser.parse_single_expression() {
+        Ok(e) => e,
+        Err(_) => return source.to_string(),
+    };
+    match &expr {
+        Expr::Call { name, .. } if name == "qor" => source.to_string(),
+        _ => format!("qor({})", source.trim()),
+    }
+}
+
 /// Phase 5: build a standalone executable (AOT path).
 pub fn build_source(
     source: &str,

@@ -7,9 +7,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::error::{runtime_error, SoplangError};
+
+/// Fixed package name and workspace dir so Cargo can reuse the soplang dependency
+/// and only rebuild the runner when the generated main.rs changes.
+const AOT_PKG_NAME: &str = "soplang_aot_runner";
 
 pub struct LlvmBackend;
 
@@ -26,21 +29,17 @@ impl LlvmBackend {
         strict: bool,
     ) -> Result<(), SoplangError> {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| runtime_error(e.to_string(), 0, 0))?
-            .as_millis();
-        let pkg_name = format!("soplang_aot_{}_{}", std::process::id(), now);
-        let temp_root = std::env::temp_dir().join(&pkg_name);
-        let src_dir = temp_root.join("src");
+        let aot_root = manifest_dir.join("target").join(AOT_PKG_NAME);
+        let src_dir = aot_root.join("src");
         fs::create_dir_all(&src_dir).map_err(|e| runtime_error(e.to_string(), 0, 0))?;
 
+        let cargo_toml_path = aot_root.join("Cargo.toml");
         let cargo_toml = format!(
             "[package]\nname = \"{pkg}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nsoplang = {{ path = \"{path}\" }}\n",
-            pkg = pkg_name,
+            pkg = AOT_PKG_NAME,
             path = manifest_dir.display()
         );
-        fs::write(temp_root.join("Cargo.toml"), cargo_toml)
+        fs::write(&cargo_toml_path, cargo_toml)
             .map_err(|e| runtime_error(e.to_string(), 0, 0))?;
 
         let escaped_source = format!("{source:?}");
@@ -52,7 +51,7 @@ impl LlvmBackend {
         fs::write(src_dir.join("main.rs"), runner).map_err(|e| runtime_error(e.to_string(), 0, 0))?;
 
         let mut cmd = Command::new("cargo");
-        cmd.arg("build").arg("--manifest-path").arg(temp_root.join("Cargo.toml"));
+        cmd.arg("build").arg("--manifest-path").arg(&cargo_toml_path);
         if opt_level > 0 {
             cmd.arg("--release")
                 .env("CARGO_PROFILE_RELEASE_OPT_LEVEL", format!("{}", opt_level.min(3)));
@@ -65,12 +64,12 @@ impl LlvmBackend {
         }
 
         let exe_name = if cfg!(windows) {
-            format!("{}.exe", pkg_name)
+            format!("{}.exe", AOT_PKG_NAME)
         } else {
-            pkg_name.clone()
+            AOT_PKG_NAME.to_string()
         };
         let profile = if opt_level == 0 { "debug" } else { "release" };
-        let built = temp_root.join("target").join(profile).join(exe_name);
+        let built = aot_root.join("target").join(profile).join(&exe_name);
         if !built.exists() {
             return Err(runtime_error("AOT binary not found after build", 0, 0));
         }

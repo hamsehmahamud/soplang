@@ -23,6 +23,20 @@ impl Parser {
         Ok(stmts)
     }
 
+    /// Parse the entire input as a single expression (for REPL / -c). Fails if there is extra input.
+    pub fn parse_single_expression(&mut self) -> Result<Expr, SoplangError> {
+        let e = self.parse_logical()?;
+        if !self.at_end() {
+            let t = self.peek();
+            return Err(parser_error(
+                format!("Waxaa la filayay weedh kaliya, laakiin waxaa ka haray {}", token_name_expected(&TokenType::Eof)),
+                t.line,
+                t.col,
+            ));
+        }
+        Ok(e)
+    }
+
     fn at_end(&self) -> bool {
         self.peek().kind == TokenType::Eof
     }
