@@ -78,7 +78,7 @@ impl fmt::Display for SoplangError {
             SoplangError::Import { msg, line, col, meta } => ("import", msg, line, col, meta.code),
         };
         let code_str = code.map(|c| format!(" [{}]", c)).unwrap_or_default();
-        write!(f, "Khalad {}: {}{} sadar {}, goobta {}", kind, msg, code_str, line, col)
+        write!(f, "Khalad {}: {}{} safka {}, tiirka {}", kind, msg, code_str, line, col)
     }
 }
 

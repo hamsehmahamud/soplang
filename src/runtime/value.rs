@@ -135,7 +135,7 @@ impl fmt::Display for Value {
             }
             Value::Str(s) => write!(f, "{}", s),
             Value::Bool(b) => write!(f, "{}", if *b { "run" } else { "been" }),
-            Value::Null => write!(f, "null"),
+            Value::Null => write!(f, "maran"),
             Value::List(lst) => {
                 let v = lst.borrow();
                 write!(f, "[")?;

@@ -62,7 +62,7 @@ impl LlvmBackend {
         cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
         let output = cmd
             .output()
-            .map_err(|e| runtime_error(format!("Dhisidda ma bilaabmin: {}", e), 0, 0))?;
+            .map_err(|e| runtime_error(format!("Dhisiddu ma bilaabmin: {}", e), 0, 0))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let tail = stderr
@@ -75,9 +75,9 @@ impl LlvmBackend {
                 .collect::<Vec<_>>()
                 .join("\n");
             let msg = if tail.trim().is_empty() {
-                "Dhisidda barnaamijka way fashilmay.".to_string()
+                "Dhisidda barnaamijka waa ay fashilantay.".to_string()
             } else {
-                format!("Dhisidda barnaamijka way fashilmay.\n\n{}", tail.trim_end())
+                format!("Dhisidda barnaamijka waa ay fashilantay.\n\n{}", tail.trim_end())
             };
             return Err(runtime_error(msg, 0, 0));
         }

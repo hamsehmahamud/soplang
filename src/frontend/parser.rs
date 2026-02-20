@@ -29,7 +29,7 @@ impl Parser {
         if !self.at_end() {
             let t = self.peek();
             return Err(parser_error(
-                format!("Waxaa la filayay weedh kaliya, laakiin waxaa ka haray {}", token_name_expected(&TokenType::Eof)),
+                format!("Waxaa la filayay hal weedh oo qudha, laakiin waxaa ka haray {}", token_name_expected(&TokenType::Eof)),
                 t.line,
                 t.col,
             ));
@@ -117,7 +117,7 @@ impl Parser {
 
         if matches!(t.kind, TokenType::HaddiiKale | TokenType::Ugudambeyn) {
             return Err(parser_error(
-                "haddii_kale iyo ugudambeyn waa in ay ku jiraan haddii",
+                "haddii_kale iyo ugudambeyn waa in ay raacaan 'haddii'",
                 line,
                 col,
             ));

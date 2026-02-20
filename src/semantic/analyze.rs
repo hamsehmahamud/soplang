@@ -102,23 +102,23 @@ fn analyze_stmt(
         Stmt::VarDecl { name, type_ann, is_const, value, line, col } => {
             if opts.strict && *type_ann == TypeAnnotation::Dynamic {
                 return Err(type_error_ex(
-                    format!("'{}' waa dynamic laakiin strict mode waa shidan", name),
+                    format!("'{}' waa dynamic laakiin 'strict mode' waa shidan yahay", name),
                     *line,
                     *col,
                     ErrorMeta::default()
                         .with_code(codes::E022_TYPE_MISMATCH)
-                        .with_hint("Strict mode: isticmaal nooc cad sida abn/jajab/qoraal/bool/teed/walax."),
+                        .with_hint("Strict mode: isticmaal nooc cad oo sugan sida abn/jajab/qoraal/bool/teed/walax."),
                 ));
             }
             let scope = sym.scopes.last_mut().unwrap();
             if scope.vars.contains_key(name) {
                 return Err(type_error_ex(
-                    format!("Magaca '{}' waa la qoray horay", name),
+                    format!("Magaca '{}' mar hore ayaa la qeexay", name),
                     *line,
                     *col,
                     ErrorMeta::default()
                         .with_code(codes::E020_REDECLARED)
-                        .with_hint("Magacan ayaa horay loogu isticmaalay. Isticmaal magac kale oo gaar ah."),
+                        .with_hint("Magacan ayaa mar hore la isticmaalay. Fadlan isticmaal magac kale."),
                 ));
             }
             let slot = scope.vars.len();
@@ -151,7 +151,7 @@ fn analyze_stmt(
             if let Expr::Identifier(name) = target {
                 let var = resolve_name(sym, &name, None).ok_or_else(|| {
                     type_error_ex(
-                        format!("Magaca '{}' ma aqoonsan", name),
+                        format!("Magaca '{}' lama aqoonsan", name),
                         *line,
                         *col,
                         ErrorMeta::default()
@@ -369,7 +369,7 @@ fn analyze_expr(
                 if sig.params.len() != args.len() {
                     return Err(type_error_ex(
                         format!(
-                            "hawl '{}' waxay rabtaa {} dood, laakiin {} ayaa la bixiyay",
+                            "hawl '{}' waxay u baahan tahay {} dood, laakiin {} ayaa la bixiyay",
                             name,
                             sig.params.len(),
                             args.len()

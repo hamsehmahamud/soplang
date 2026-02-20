@@ -114,21 +114,21 @@ pub fn builtin_walax(args: Vec<Value>) -> Result<Value, SoplangError> {
 
 /// Built-in daji: floor.
 pub fn builtin_daji(args: Vec<Value>) -> Result<Value, SoplangError> {
-    let v = args.into_iter().next().ok_or_else(|| err_type("daji() waa in uu qaato 1 qiimo"))?;
+    let v = args.into_iter().next().ok_or_else(|| err_type("daji() waa in ay qaadato 1 qiimo"))?;
     let n = to_number(&v)?;
     Ok(Value::Float(n.floor()))
 }
 
 /// Built-in kor: ceil.
 pub fn builtin_kor(args: Vec<Value>) -> Result<Value, SoplangError> {
-    let v = args.into_iter().next().ok_or_else(|| err_type("kor() waa in uu qaato 1 qiimo"))?;
+    let v = args.into_iter().next().ok_or_else(|| err_type("kor() waa in ay qaadato 1 qiimo"))?;
     let n = to_number(&v)?;
     Ok(Value::Float(n.ceil()))
 }
 
 /// Built-in dherer: length of list, string, or object.
 pub fn builtin_dherer(args: Vec<Value>) -> Result<Value, SoplangError> {
-    let v = args.into_iter().next().ok_or_else(|| err_type("dherer() waa in uu qaato 1 qiimo"))?;
+    let v = args.into_iter().next().ok_or_else(|| err_type("dherer() waa in ay qaadato 1 qiimo"))?;
     let len = match &v {
         Value::List(l) => l.borrow().len(),
         Value::Str(s) => s.len(),
@@ -154,7 +154,7 @@ pub fn builtin_xul(args: Vec<Value>) -> Result<Value, SoplangError> {
                 _ => return Err(err_type("Qiimaha ma ahan teed")),
             };
             if list.is_empty() {
-                return Err(err_runtime("teedka waa madhan"));
+                return Err(err_runtime("teedku waa madhan yahay"));
             }
             let i = (next() * list.len() as f64).floor() as usize;
             Ok(list[i].clone())
@@ -275,7 +275,7 @@ pub fn list_habee(lst: Rc<RefCell<Vec<Value>>>, _args: &[Value]) -> Result<Value
 
 pub fn list_jar(lst: Rc<RefCell<Vec<Value>>>, args: &[Value]) -> Result<Value, SoplangError> {
     if args.len() < 2 {
-        return Err(err_type("jar() waa in uu qaato 2 qiimo (bilow iyo dhamaad)"));
+        return Err(err_type("jar() waa in ay qaadato 2 qiimo (bilow iyo dhammaad)"));
     }
     let start = to_number(&args[0]).map_err(|_| err_type("Bilowga iyo dhamaadka waa inay noqdaan abn"))? as i64;
     let end = to_number(&args[1]).map_err(|_| err_type("Bilowga iyo dhamaadka waa inay noqdaan abn"))? as i64;
@@ -396,7 +396,7 @@ pub fn string_bilow(s: String, args: &[Value]) -> Result<Value, SoplangError> {
 pub fn string_beddel(s: String, args: &[Value]) -> Result<Value, SoplangError> {
     let (target, repl) = match (args.get(0), args.get(1)) {
         (Some(a), Some(b)) => (value_to_string(a), value_to_string(b)),
-        _ => return Err(err_type("beddel() waa in uu qaato 2 qiimo")),
+        _ => return Err(err_type("beddel() waa in ay qaadato 2 qiimo")),
     };
     let new_s = s.replacen(&target, &repl, 1);
     Ok(Value::Str(new_s))
@@ -405,7 +405,7 @@ pub fn string_beddel(s: String, args: &[Value]) -> Result<Value, SoplangError> {
 pub fn string_beddel_dhammaan(s: String, args: &[Value]) -> Result<Value, SoplangError> {
     let (target, repl) = match (args.get(0), args.get(1)) {
         (Some(a), Some(b)) => (value_to_string(a), value_to_string(b)),
-        _ => return Err(err_type("beddel_dhammaan() waa in uu qaato 2 qiimo")),
+        _ => return Err(err_type("beddel_dhammaan() waa in ay qaadato 2 qiimo")),
     };
     Ok(Value::Str(s.replace(&target, &repl)))
 }

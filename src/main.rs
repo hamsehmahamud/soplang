@@ -68,14 +68,14 @@ fn main() {
         let path = match &cli.filename {
             Some(p) => p.clone(),
             None => {
-                eprintln!("Khalad: --build waa in la bixiyo fayl: soplang --build <fayl.sop> [-o <output>] [-q]");
+                eprintln!("Khalad: --build waxa ay u baahan tahay magaca faylka: soplang --build <fayl.sop> [-o <output>] [-q]");
                 process::exit(1);
             }
         };
         let source = match fs::read_to_string(&path) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("Khalad: Ma akhriyin faylka '{}': {}", path.display(), e);
+                eprintln!("Khalad: Ma suurtagelin in la akhriyo faylka '{}': {}", path.display(), e);
                 process::exit(1);
             }
         };
@@ -107,7 +107,7 @@ fn main() {
         let spin = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴'];
         let mut i = 0;
         while !build_handle.is_finished() {
-            print!("\rBarnaamijka waa la dhisayaa {}  ", spin[i]);
+            print!("\rBarnaamijka waa la dhisayaa... {}  ", spin[i]);
             let _ = std::io::stdout().flush();
             i = (i + 1) % spin.len();
             thread::sleep(Duration::from_millis(80));
@@ -118,7 +118,7 @@ fn main() {
 
         match result {
             Ok(()) => {
-                print!("\r{: <50}\rWaa la dhisay: {} ({:.1}s)\n", "", out.display(), elapsed);
+                print!("\r{: <50}\rDhisiddu waa ay dhammaatay: {} ({:.1}s)\n", "", out.display(), elapsed);
                 let _ = std::io::stdout().flush();
                 return;
             }
@@ -160,7 +160,7 @@ fn main() {
         match fs::read_to_string(path) {
             Ok(source) => run_then_maybe_shell(path.clone(), source),
             Err(e) => {
-                eprintln!("Khalad: Ma akhriyin faylka '{}': {}", path.display(), e);
+                eprintln!("Khalad: Ma suurtagelin in la akhriyo faylka '{}': {}", path.display(), e);
                 process::exit(1);
             }
         }
@@ -171,14 +171,14 @@ fn main() {
         let path = match example_path(n) {
             Some(p) => p,
             None => {
-                eprintln!("Khalad: Tusaale {} ma jiro (examples/)", n);
+                eprintln!("Khalad: Tusaale {} ma jiro (faylka examples/ kuma jiro)", n);
                 process::exit(1);
             }
         };
         match fs::read_to_string(&path) {
             Ok(source) => run_then_maybe_shell(path, source),
             Err(e) => {
-                eprintln!("Khalad: Ma akhriyin faylka: {}", e);
+                eprintln!("Khalad: Ma suurtagelin in la akhriyo faylka: {}", e);
                 process::exit(1);
             }
         }
@@ -189,7 +189,7 @@ fn main() {
         let source = match fs::read_to_string(path) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("Khalad: Ma akhriyin faylka '{}': {}", path.display(), e);
+                eprintln!("Khalad: Ma suurtagelin in la akhriyo faylka '{}': {}", path.display(), e);
                 process::exit(1);
             }
         };

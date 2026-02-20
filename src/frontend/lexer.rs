@@ -131,7 +131,7 @@ impl<'a> Lexer<'a> {
                 '.' => (TokenType::Dot, "."),
                 _ => {
                     return Err(lexer_error_ex(
-                        format!("Xaraf aan la filayn: {}", c),
+                        format!("Xaraf aan la aqoon: {}", c),
                         line, col,
                         ErrorMeta::default().with_code(codes::E001_UNEXPECTED_CHAR),
                     ));
@@ -189,7 +189,7 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
         Err(lexer_error_ex(
-            "Faallo aan la dhammaystirin",
+            "Faallo aan la xidhin",
             self.line, self.col,
             ErrorMeta::default().with_code(codes::E003_UNTERMINATED_COMMENT),
         ))
@@ -228,7 +228,7 @@ impl<'a> Lexer<'a> {
             Ok(Token::new(TokenType::String, s, start_line, start_col))
         } else {
             Err(lexer_error_ex(
-                "Qoraal aan la dhammaystirin",
+                "Qoraal aan la xidhin",
                 self.line, self.col,
                 ErrorMeta::default().with_code(codes::E002_UNTERMINATED_STRING),
             ))

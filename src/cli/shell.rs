@@ -20,16 +20,16 @@ fn history_path() -> Option<std::path::PathBuf> {
 
 fn welcome_banner() -> String {
     format!(
-        "Soplang {} — Luuqad barnaamijka Soomaaliya.\n  /caawii  = caawimo   /bixi = bixi   /akhrifayl <fayl> = akhri oo orod\n  Ctrl+D ama /bixi = bixi",
+        "Soplang {} — Luuqadda barnaamijka ee Soomaaliyeed.\n  /caawi  = caawimo   /bixi = bixi   /akhrifayl <fayl> = akhri oo orod\n  Ctrl+D ama /bixi = bixi",
         env!("CARGO_PKG_VERSION")
     )
 }
 
-const HELP_TEXT: &str = r#"Caawimo (commands):
-  /caawii, /help    Muuji boggan
+const HELP_TEXT: &str = r#"Caawimo (amarada):
+  /caawi, /help     Muuji boggan
   /bixi, /exit      Ka bixi REPL
   /akhrifayl <fayl> Akhri faylka .sop oo orod
-  /ast              Muuji AST (structure)
+  /ast              Muuji AST (qaabka weedha)
   /hir              Muuji HIR (ir)
 
 Haddii aad geliso weedh kaliya (tusaale: 1+2), natiijada waxaa laguu soo bandhigayaa."#;
@@ -124,7 +124,7 @@ impl Shell {
         let parts: Vec<&str> = line.split_whitespace().collect();
         let cmd = parts.get(0).copied().unwrap_or("");
         match cmd {
-            "/caawii" | "/help" => {
+            "/caawi" | "/help" => {
                 println!("{}", HELP_TEXT);
             }
             "/bixi" | "/exit" => return true,
@@ -136,7 +136,7 @@ impl Shell {
                 }
                 match fs::read_to_string(path) {
                     Ok(source) => self.execute(&source),
-                    Err(e) => eprintln!("Khalad: Ma akhriyin faylka '{}': {}", path, e),
+                    Err(e) => eprintln!("Khalad: Ma suurtagelin in la akhriyo faylka '{}': {}", path, e),
                 }
             }
             "/ast" => {
@@ -159,7 +159,7 @@ impl Shell {
                     eprintln!("{}", format_error_with_source(&e, Some(rest)));
                 }
             }
-            _ => eprintln!("Khalad: Amar aan la aqoonin '{}'. Geli /caawii.", cmd),
+            _ => eprintln!("Khalad: Amar aan la garanayn '{}'. Geli /caawi.", cmd),
         }
         false
     }

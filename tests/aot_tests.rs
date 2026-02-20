@@ -40,7 +40,7 @@ fn test_aot_build_hello_matches_expected() {
     let out_bin = temp_bin_path("hello_aot");
     let status = Command::new(soplang_exe())
         .arg("--build")
-        .arg("examples/hello.sop")
+        .arg("examples/01_hello.sop")
         .arg("-o")
         .arg(&out_bin)
         .status()
@@ -48,8 +48,7 @@ fn test_aot_build_hello_matches_expected() {
     assert!(status.success(), "AOT build failed");
 
     let actual = run_and_capture(&out_bin);
-    let expected = fs::read_to_string("examples/hello.expected").expect("read expected");
-    assert_eq!(actual, expected);
+    assert_eq!(actual, "Salaan, Adduunka!\n");
 
     let _ = fs::remove_file(out_bin);
 }
@@ -59,7 +58,7 @@ fn test_aot_build_opt_level_0_runs() {
     let out_bin = temp_bin_path("hello_aot_o0");
     let status = Command::new(soplang_exe())
         .arg("--build")
-        .arg("examples/hello.sop")
+        .arg("examples/01_hello.sop")
         .arg("--opt-level")
         .arg("0")
         .arg("-o")
