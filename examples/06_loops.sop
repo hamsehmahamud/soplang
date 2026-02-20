@@ -1,0 +1,10 @@
+qor("kuceli:")
+kuceli (i 0 ilaa 3) {
+  qor(i)
+}
+qor("intay:")
+abn j = 0
+intay (j < 2) {
+  qor(j)
+  j = j + 1
+}

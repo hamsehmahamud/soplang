@@ -1,0 +1,14 @@
+qor(5 + 3)
+qor(10 - 2)
+qor(4 * 3)
+qor(20 / 4)
+qor(7 % 3)
+qor(5 == 5)
+qor(5 != 3)
+qor(10 > 5)
+door a = 6 >= 6
+qor(a)
+door b = run && been
+qor(b)
+qor(run || been)
+qor(!been)

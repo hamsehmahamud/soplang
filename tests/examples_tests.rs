@@ -6,11 +6,25 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn run_file(path: &Path) -> String {
+    run_file_with_stdin(path, None)
+}
+
+/// Run a .sop file, optionally with stdin (e.g. for gelin() in 13_input.sop).
+fn run_file_with_stdin(path: &Path, stdin: Option<&str>) -> String {
     let exe = env!("CARGO_BIN_EXE_soplang");
-    let out = Command::new(exe)
-        .arg(path)
-        .output()
-        .expect("run soplang");
+    let mut cmd = Command::new(exe);
+    cmd.arg(path);
+    if let Some(input) = stdin {
+        use std::io::Write;
+        cmd.stdin(std::process::Stdio::piped());
+        let mut child = cmd.spawn().expect("spawn soplang");
+        if let Some(mut stdin_write) = child.stdin.take() {
+            stdin_write.write_all(input.as_bytes()).expect("write stdin");
+        }
+        let out = child.wait_with_output().expect("wait soplang");
+        return String::from_utf8(out.stdout).unwrap();
+    }
+    let out = cmd.output().expect("run soplang");
     String::from_utf8(out.stdout).unwrap()
 }
 
@@ -53,8 +67,8 @@ fn test_example_03_type_checking() {
 }
 
 /// Phase 7.2: Run each examples/*.sop that has a .expected file; assert stdout matches.
-/// Regenerate .expected: for f in examples/*.sop; do stem=$(basename "$f" .sop); ./target/debug/soplang "$f" 2>/dev/null > "examples/${stem}.expected"; done
-/// Skip 43_random_function.expected (non-deterministic).
+/// Regenerate .expected: see examples/README.md.
+/// Skips: 43_random_function (non-deterministic), and any .sop without a .expected file.
 #[test]
 fn test_each_example_against_expected() {
     let examples_dir = Path::new("examples");
@@ -70,12 +84,21 @@ fn test_each_example_against_expected() {
     sop_paths.sort();
 
     for sop_path in sop_paths {
+        let stem = sop_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+        if stem == "43_random_function" || stem == "14_random" {
+            continue; // non-deterministic (xul)
+        }
         let expected_path = expected_path(&sop_path);
         if !expected_path.exists() {
             continue;
         }
         let expected = fs::read_to_string(&expected_path).unwrap_or_default();
-        let actual = run_file(&sop_path);
+        // 13_input.sop uses gelin(); feed stdin so output is deterministic.
+        let actual = if stem == "13_input" {
+            run_file_with_stdin(&sop_path, Some("TestUser\n"))
+        } else {
+            run_file(&sop_path)
+        };
         assert_eq!(
             actual,
             expected,

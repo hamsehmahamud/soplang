@@ -1,0 +1,12 @@
+teed liis = [1, 2, 3]
+qor(liis)
+qor(liis[0])
+liis.kudar(4)
+qor(liis)
+qor(liis.dherer())
+door nuqul = liis.nuqul()
+nuqul.habee()
+qor(nuqul)
+qor(liis.jar(0, 2))
+liis.rog()
+qor(liis)

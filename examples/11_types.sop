@@ -1,0 +1,11 @@
+door a = 42
+qor(nooc(a))
+qor(abn(3.7))
+qor(qoraal(10))
+qor(bool(1))
+qor(daji(4.9))
+qor(kor(4.1))
+teed t = [1, 2, 3]
+qor(dherer(t))
+qor(baaxad(4))
+qor(baaxad(2, 5))

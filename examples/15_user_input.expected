@@ -1,9 +1,0 @@
-Gelin Example - User Input in Soplang
----------------------------------
-Note: For automated testing, we'll simulate user input with a hardcoded value
-(Normally this would be: door magac = gelin('Enter your name: '))
-Hello, Soplang User!
-Welcome to Soplang programming!
-The type of your input is: qoraal
-Your name has 12 characters.
-Thank you for trying gelin in Soplang!

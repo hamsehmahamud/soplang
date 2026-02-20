@@ -1,0 +1,12 @@
+door x = 10
+qor(x)
+x = "qoraal"
+qor(x)
+abn n = 5
+qoraal s = "salaan"
+jajab f = 3.14
+bool b = run
+qor(n)
+qor(s)
+qor(f)
+qor(b)

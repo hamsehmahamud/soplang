@@ -1,0 +1,13 @@
+hawl isku_dar(a, b) {
+  celi a + b
+}
+qor(isku_dar(2, 3))
+hawl salaan() {
+  qor("Salaan!")
+}
+salaan()
+hawl weyn(x) {
+  haddii (x > 0) { celi run } ugudambeyn { celi been }
+}
+qor(weyn(5))
+qor(weyn(-1))

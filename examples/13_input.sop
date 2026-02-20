@@ -1,0 +1,5 @@
+qor("Gelin (input) tusaale:")
+door magac = gelin("Magacaaga geli: ")
+qor("Hello, " + magac + "!")
+qor(nooc(magac))
+qor(dherer(magac))
