@@ -20,7 +20,7 @@ Soplang is the Somali programming language, designed to make programming accessi
 
 ### Building and Performance
 - [Build Guide](BUILD_GUIDE.md) - How to build Soplang from source (Windows, macOS, Linux)
-- [Performance](../benchmarks/RESULTS.md) - Benchmark results (Criterion)
+- [Performance / benchmarks](../benchmarks/README.md) - Compiler benchmarks (Criterion), [RESULTS.md](../benchmarks/RESULTS.md)
 
 ### Architecture & Internals
 - [Compiler Plan](../COMPILER_PLAN.md) - Cranelift JIT + LLVM AOT (Rust, in progress)

@@ -12,7 +12,7 @@ Soplang is a programming language with syntax inspired by Somali, making program
 |------|-------------|
 | **src/** | Rust implementation: lexer, parser, semantic, HIR, runtime, Cranelift JIT, and AOT build backend. |
 | **examples/** | Soplang example programs (`.sop` files). |
-| **benchmarks/** | Benchmark programs and [RESULTS.md](benchmarks/RESULTS.md). |
+| **benchmarks/** | Compiler benchmark programs, [RESULTS.md](benchmarks/RESULTS.md), [README](benchmarks/README.md), and `run_benchmarks.sh` to regenerate results. |
 | **legacy-interpreter/** | Legacy interpreter code, now in the separate repo [`soplang/soplang-interpreter`](https://github.com/soplang/soplang-interpreter). |
 | **docs/** | Documentation (installation, language reference, contributing). |
 | **windows/**, **linux/**, **macos/** | Platform-specific build and packaging scripts. |
@@ -68,18 +68,19 @@ Current AOT backend is implemented by generating a temporary Rust runner and com
 
 ## Benchmark results
 
-Runtime performance is benchmarked with [Criterion](https://github.com/bheisler/criterion.rs). Summary (release build):
+The **compiler** (Cranelift JIT) is benchmarked with [Criterion](https://github.com/bheisler/criterion.rs). Summary (release build, in-process):
 
 | Benchmark | Mean time |
 |-----------|-----------|
-| fib(25) recursive | ~282 ms |
-| loop sum 1..100k | ~25 ms |
-| nested loops 200×200 | ~8.5 ms |
-| string concat 1k | ~617 µs |
-| list ops 5k elements | ~2.5 ms |
-| object create 2k | ~1.8 ms |
+| fib(25) recursive | ~25.6 ms |
+| loop sum 1..100k | ~9.9 ms |
+| nested loops 200×200 | ~4.2 ms |
+| string concat 1k | ~0.67 ms |
+| list ops 5k elements | ~1.3 ms |
+| object create 2k | ~252 µs |
 
-Details: [benchmarks/RESULTS.md](benchmarks/RESULTS.md).
+**How to run:** `cargo bench` or `bash benchmarks/run_benchmarks.sh` (regenerates RESULTS.md).  
+**Details:** [benchmarks/RESULTS.md](benchmarks/RESULTS.md). **Benchmark names and performance notes:** [benchmarks/README.md](benchmarks/README.md).
 
 ## Legacy interpreter
 
