@@ -40,14 +40,21 @@ pub struct FunctionMeta {
     pub captures:    Vec<String>,
     /// Variable name -> VarInfo for this function's scope (params + locals).
     pub scope_vars:  HashMap<String, VarInfo>,
+    pub class_name:  Option<String>,
+    pub is_method:   bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct ClassMeta {
-    pub name:   String,
-    pub parent: Option<String>,
-    /// Method names (order preserved for stable slot/index).
-    pub methods: Vec<String>,
+    pub name:    String,
+    pub parent:  Option<String>,
+    /// Method name -> mangled function name (e.g. "salaam" -> "Bisad::salaam").
+    pub methods: HashMap<String, String>,
+}
+
+/// Mangle a class method name for global registration.
+pub fn mangle_method(class: &str, method: &str) -> String {
+    format!("{}::{}", class, method)
 }
 
 /// Run semantic analysis on the AST. Returns a symbol table or an error.
@@ -74,8 +81,30 @@ pub fn analyze_with_options(
     let mut sym = SymbolTable::default();
     sym.scopes.push(Scope::default()); // global scope
     let fn_sigs = collect_function_sigs(stmts);
-    analyze_block(stmts, &mut sym, &opts, &fn_sigs, None)?;
+    analyze_block(stmts, &mut sym, &opts, &fn_sigs, None, None)?;
+    validate_classes(&sym)?;
     Ok(sym)
+}
+
+fn validate_classes(sym: &SymbolTable) -> Result<(), SoplangError> {
+    for meta in sym.classes.values() {
+        if let Some(ref parent) = meta.parent {
+            if !sym.classes.contains_key(parent) {
+                return Err(type_error_ex(
+                    format!(
+                        "Qaab '{}' wuxuu ka dhaxlay '{}' laakiin qaabkaas ma jiro",
+                        meta.name, parent
+                    ),
+                    0,
+                    0,
+                    ErrorMeta::default()
+                        .with_code(codes::E021_UNDECLARED)
+                        .with_hint("Hubi in qaabka waalidka uu ka horreeyo qaabka ilmaha."),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn analyze_block(
@@ -84,9 +113,10 @@ fn analyze_block(
     opts: &AnalyzeOptions,
     fn_sigs: &HashMap<String, FunctionSig>,
     current_return: Option<TypeAnnotation>,
+    current_class: Option<&str>,
 ) -> Result<(), SoplangError> {
     for s in stmts {
-        analyze_stmt(s, sym, opts, fn_sigs, current_return)?;
+        analyze_stmt(s, sym, opts, fn_sigs, current_return, current_class)?;
     }
     Ok(())
 }
@@ -97,6 +127,7 @@ fn analyze_stmt(
     opts: &AnalyzeOptions,
     fn_sigs: &HashMap<String, FunctionSig>,
     current_return: Option<TypeAnnotation>,
+    current_class: Option<&str>,
 ) -> Result<(), SoplangError> {
     match stmt {
         Stmt::VarDecl { name, type_ann, is_const, value, line, col } => {
@@ -145,7 +176,7 @@ fn analyze_stmt(
                     }
                 }
             }
-            analyze_expr(value, sym, fn_sigs)?;
+            analyze_expr(value, sym, fn_sigs, current_class)?;
         }
         Stmt::Assign { target, value, line, col } => {
             if let Expr::Identifier(name) = target {
@@ -184,11 +215,24 @@ fn analyze_stmt(
                 }
             } else {
                 // Index or Property: resolve subexpressions only
-                analyze_assign_target(target, sym, fn_sigs)?;
+                analyze_assign_target(target, sym, fn_sigs, current_class)?;
             }
-            analyze_expr(value, sym, fn_sigs)?;
+            analyze_expr(value, sym, fn_sigs, current_class)?;
         }
         Stmt::FuncDef { name, params, return_ann, body } => {
+            let is_method = current_class.is_some();
+            if is_method {
+                if params.iter().any(|p| p.name == "nafta") {
+                    return Err(type_error_ex(
+                        "'nafta' waa magac la xafiday oo si toos ah loo geliyaa qaabka gudihiisa",
+                        0,
+                        0,
+                        ErrorMeta::default()
+                            .with_code(codes::E020_REDECLARED)
+                            .with_hint("Ha ku qorin 'nafta' liiska doodaha hawsha."),
+                    ));
+                }
+            }
             if opts.strict {
                 if *return_ann == TypeAnnotation::Dynamic {
                     return Err(type_error_ex(
@@ -211,13 +255,33 @@ fn analyze_stmt(
                     ));
                 }
             }
+            let fn_name = if let Some(class) = current_class {
+                mangle_method(class, name)
+            } else {
+                name.clone()
+            };
+            let class_name = current_class.map(str::to_string);
             let mut func_scope = Scope::default();
-            let param_slots: Vec<usize> = (0..params.len()).collect();
+            let mut param_slots: Vec<usize> = Vec::new();
+            if is_method {
+                func_scope.vars.insert(
+                    "nafta".to_string(),
+                    VarInfo {
+                        slot: 0,
+                        type_ann: TypeAnnotation::Dynamic,
+                        is_const: false,
+                        is_captured: false,
+                    },
+                );
+                param_slots.push(0);
+            }
             for (i, p) in params.iter().enumerate() {
+                let slot = if is_method { i + 1 } else { i };
+                param_slots.push(slot);
                 func_scope.vars.insert(
                     p.name.clone(),
                     VarInfo {
-                        slot: i,
+                        slot,
                         type_ann: p.type_ann,
                         is_const: false,
                         is_captured: false,
@@ -225,56 +289,77 @@ fn analyze_stmt(
                 );
             }
             sym.scopes.push(func_scope);
-            analyze_block(body, sym, opts, fn_sigs, Some(*return_ann))?;
+            analyze_block(body, sym, opts, fn_sigs, Some(*return_ann), current_class)?;
             let scope = sym.scopes.pop().unwrap();
             let local_count = scope.vars.len();
             sym.functions.push(FunctionMeta {
-                name:       name.clone(),
+                name: fn_name,
                 param_slots,
                 param_types: params.iter().map(|p| p.type_ann).collect(),
                 return_ann: *return_ann,
                 local_count,
-                captures:   Vec::new(),
+                captures: Vec::new(),
                 scope_vars: scope.vars,
+                class_name,
+                is_method,
             });
         }
         Stmt::ClassDef { name, parent, body } => {
-            let mut methods = Vec::new();
+            if sym.classes.contains_key(name) {
+                return Err(type_error_ex(
+                    format!("Qaab '{}' mar hore ayaa la qeexay", name),
+                    0,
+                    0,
+                    ErrorMeta::default()
+                        .with_code(codes::E020_REDECLARED)
+                        .with_hint("Isticmaal magac kale qaabka."),
+                ));
+            }
+            let mut methods = HashMap::new();
             for s in body {
                 if let Stmt::FuncDef { name: mname, .. } = s {
-                    methods.push(mname.clone());
+                    if methods.contains_key(mname) {
+                        return Err(type_error_ex(
+                            format!("Hawl '{}' ayaa laba jeer ku jirta qaabka '{}'", mname, name),
+                            0,
+                            0,
+                            ErrorMeta::default()
+                                .with_code(codes::E020_REDECLARED)
+                                .with_hint("Magacyada hawlgallada qaabka waa in ay noqdaan kuwo gaar ah."),
+                        ));
+                    }
+                    methods.insert(mname.clone(), mangle_method(name, mname));
                 }
             }
             sym.classes.insert(
                 name.clone(),
                 ClassMeta {
-                    name:   name.clone(),
+                    name: name.clone(),
                     parent: parent.clone(),
                     methods,
                 },
             );
-            // Recurse into class body (method bodies get their own scope via FuncDef)
-            analyze_block(body, sym, opts, fn_sigs, current_return)?;
+            analyze_block(body, sym, opts, fn_sigs, current_return, Some(name))?;
         }
         Stmt::If { cond, then_body, elseifs, else_body } => {
-            analyze_expr(cond, sym, fn_sigs)?;
-            analyze_block(then_body, sym, opts, fn_sigs, current_return)?;
+            analyze_expr(cond, sym, fn_sigs, current_class)?;
+            analyze_block(then_body, sym, opts, fn_sigs, current_return, current_class)?;
             for (c, b) in elseifs {
-                analyze_expr(c, sym, fn_sigs)?;
-                analyze_block(b, sym, opts, fn_sigs, current_return)?;
+                analyze_expr(c, sym, fn_sigs, current_class)?;
+                analyze_block(b, sym, opts, fn_sigs, current_return, current_class)?;
             }
             if let Some(eb) = else_body {
-                analyze_block(eb, sym, opts, fn_sigs, current_return)?;
+                analyze_block(eb, sym, opts, fn_sigs, current_return, current_class)?;
             }
         }
         Stmt::Switch { expr, cases, default } => {
-            analyze_expr(expr, sym, fn_sigs)?;
+            analyze_expr(expr, sym, fn_sigs, current_class)?;
             for (v, body) in cases {
-                analyze_expr(v, sym, fn_sigs)?;
-                analyze_block(body, sym, opts, fn_sigs, current_return)?;
+                analyze_expr(v, sym, fn_sigs, current_class)?;
+                analyze_block(body, sym, opts, fn_sigs, current_return, current_class)?;
             }
             if let Some(d) = default {
-                analyze_block(d, sym, opts, fn_sigs, current_return)?;
+                analyze_block(d, sym, opts, fn_sigs, current_return, current_class)?;
             }
         }
         Stmt::For { var, start, end, step, body } => {
@@ -292,19 +377,19 @@ fn analyze_stmt(
                     },
                 );
             }
-            analyze_expr(start, sym, fn_sigs)?;
-            analyze_expr(end, sym, fn_sigs)?;
+            analyze_expr(start, sym, fn_sigs, current_class)?;
+            analyze_expr(end, sym, fn_sigs, current_class)?;
             if let Some(s) = step {
-                analyze_expr(s, sym, fn_sigs)?;
+                analyze_expr(s, sym, fn_sigs, current_class)?;
             }
-            analyze_block(body, sym, opts, fn_sigs, current_return)?;
+            analyze_block(body, sym, opts, fn_sigs, current_return, current_class)?;
         }
         Stmt::While { cond, body } => {
-            analyze_expr(cond, sym, fn_sigs)?;
-            analyze_block(body, sym, opts, fn_sigs, current_return)?;
+            analyze_expr(cond, sym, fn_sigs, current_class)?;
+            analyze_block(body, sym, opts, fn_sigs, current_return, current_class)?;
         }
         Stmt::Return(Some(e)) => {
-            analyze_expr(e, sym, fn_sigs)?;
+            analyze_expr(e, sym, fn_sigs, current_class)?;
             if let Some(ret_ann) = current_return {
                 if ret_ann != TypeAnnotation::Dynamic {
                     if let Some(expr_ty) = infer_expr_type(e, sym, fn_sigs) {
@@ -337,13 +422,27 @@ fn analyze_stmt(
             }
         }
         Stmt::Break | Stmt::Continue => {}
-        Stmt::TryCatch { try_body, catch_body, .. } => {
-            analyze_block(try_body, sym, opts, fn_sigs, current_return)?;
-            analyze_block(catch_body, sym, opts, fn_sigs, current_return)?;
+        Stmt::TryCatch { try_body, err_var, catch_body, .. } => {
+            analyze_block(try_body, sym, opts, fn_sigs, current_return, current_class)?;
+            sym.scopes.push(Scope::default());
+            {
+                let scope = sym.scopes.last_mut().unwrap();
+                scope.vars.insert(
+                    err_var.clone(),
+                    VarInfo {
+                        slot:        0,
+                        type_ann:    TypeAnnotation::Dynamic,
+                        is_const:    false,
+                        is_captured: false,
+                    },
+                );
+            }
+            analyze_block(catch_body, sym, opts, fn_sigs, current_return, current_class)?;
+            sym.scopes.pop();
         }
         Stmt::Import(_) => {}
-        Stmt::Block(stmts) => analyze_block(stmts, sym, opts, fn_sigs, current_return)?,
-        Stmt::Expr(e) => analyze_expr(e, sym, fn_sigs)?,
+        Stmt::Block(stmts) => analyze_block(stmts, sym, opts, fn_sigs, current_return, current_class)?,
+        Stmt::Expr(e) => analyze_expr(e, sym, fn_sigs, current_class)?,
     }
     Ok(())
 }
@@ -352,18 +451,30 @@ fn analyze_expr(
     expr: &Expr,
     sym: &mut SymbolTable,
     fn_sigs: &HashMap<String, FunctionSig>,
+    current_class: Option<&str>,
 ) -> Result<(), SoplangError> {
     match expr {
         Expr::Literal(_) => {}
-        Expr::Identifier(_) => {}
-        Expr::BinaryOp { left, right, .. } => {
-            analyze_expr(left, sym, fn_sigs)?;
-            analyze_expr(right, sym, fn_sigs)?;
+        Expr::Identifier(name) => {
+            if name == "nafta" && current_class.is_none() {
+                return Err(type_error_ex(
+                    "'nafta' waxaa loo isticmaali karaa gudaha hawlgallada qaabka kaliya",
+                    0,
+                    0,
+                    ErrorMeta::default()
+                        .with_code(codes::E021_UNDECLARED)
+                        .with_hint("Isticmaal 'nafta' gudaha hawl ku jirta qaabka."),
+                ));
+            }
         }
-        Expr::UnaryOp { expr: e, .. } => analyze_expr(e, sym, fn_sigs)?,
+        Expr::BinaryOp { left, right, .. } => {
+            analyze_expr(left, sym, fn_sigs, current_class)?;
+            analyze_expr(right, sym, fn_sigs, current_class)?;
+        }
+        Expr::UnaryOp { expr: e, .. } => analyze_expr(e, sym, fn_sigs, current_class)?,
         Expr::Call { name, args } => {
             for a in args {
-                analyze_expr(a, sym, fn_sigs)?;
+                analyze_expr(a, sym, fn_sigs, current_class)?;
             }
             if let Some(sig) = fn_sigs.get(name) {
                 if sig.params.len() != args.len() {
@@ -407,24 +518,39 @@ fn analyze_expr(
             }
         }
         Expr::MethodCall { obj, args, .. } => {
-            analyze_expr(obj, sym, fn_sigs)?;
+            analyze_expr(obj, sym, fn_sigs, current_class)?;
             for a in args {
-                analyze_expr(a, sym, fn_sigs)?;
+                analyze_expr(a, sym, fn_sigs, current_class)?;
             }
         }
         Expr::Index { obj, idx } => {
-            analyze_expr(obj, sym, fn_sigs)?;
-            analyze_expr(idx, sym, fn_sigs)?;
+            analyze_expr(obj, sym, fn_sigs, current_class)?;
+            analyze_expr(idx, sym, fn_sigs, current_class)?;
         }
-        Expr::Property { obj, .. } => analyze_expr(obj, sym, fn_sigs)?,
+        Expr::Property { obj, .. } => analyze_expr(obj, sym, fn_sigs, current_class)?,
         Expr::List(exprs) => {
             for e in exprs {
-                analyze_expr(e, sym, fn_sigs)?;
+                analyze_expr(e, sym, fn_sigs, current_class)?;
             }
         }
         Expr::Object(pairs) => {
             for (_, e) in pairs {
-                analyze_expr(e, sym, fn_sigs)?;
+                analyze_expr(e, sym, fn_sigs, current_class)?;
+            }
+        }
+        Expr::New { class_name, args } => {
+            if !sym.classes.contains_key(class_name) {
+                return Err(type_error_ex(
+                    format!("Qaab '{}' lama aqoonsan", class_name),
+                    0,
+                    0,
+                    ErrorMeta::default()
+                        .with_code(codes::E021_UNDECLARED)
+                        .with_hint("Hubi in qaabka uu ka horreeyo isticmaalkiisa."),
+                ));
+            }
+            for a in args {
+                analyze_expr(a, sym, fn_sigs, current_class)?;
             }
         }
     }
@@ -487,8 +613,8 @@ fn infer_expr_type(
                 Some(s.ret)
             }
         }),
-        Expr::MethodCall { .. } | Expr::Index { .. } | Expr::Property { .. } => {
-            // For now, calls/index/property are treated as dynamic (we can't easily know statically)
+        Expr::MethodCall { .. } | Expr::Index { .. } | Expr::Property { .. } | Expr::New { .. } => {
+            // For now, calls/index/property/new are treated as dynamic
             None
         }
     }
@@ -549,13 +675,14 @@ fn analyze_assign_target(
     target: &Expr,
     sym: &mut SymbolTable,
     fn_sigs: &HashMap<String, FunctionSig>,
+    current_class: Option<&str>,
 ) -> Result<(), SoplangError> {
     match target {
         Expr::Index { obj, idx } => {
-            analyze_expr(obj, sym, fn_sigs)?;
-            analyze_expr(idx, sym, fn_sigs)?;
+            analyze_expr(obj, sym, fn_sigs, current_class)?;
+            analyze_expr(idx, sym, fn_sigs, current_class)?;
         }
-        Expr::Property { obj, .. } => analyze_expr(obj, sym, fn_sigs)?,
+        Expr::Property { obj, .. } => analyze_expr(obj, sym, fn_sigs, current_class)?,
         _ => {}
     }
     Ok(())
@@ -563,11 +690,15 @@ fn analyze_assign_target(
 
 fn collect_function_sigs(stmts: &[Stmt]) -> HashMap<String, FunctionSig> {
     let mut out = HashMap::new();
-    collect_function_sigs_rec(stmts, &mut out);
+    collect_function_sigs_rec(stmts, &mut out, None);
     out
 }
 
-fn collect_function_sigs_rec(stmts: &[Stmt], out: &mut HashMap<String, FunctionSig>) {
+fn collect_function_sigs_rec(
+    stmts: &[Stmt],
+    out: &mut HashMap<String, FunctionSig>,
+    current_class: Option<&str>,
+) {
     for s in stmts {
         match s {
             Stmt::FuncDef {
@@ -576,45 +707,55 @@ fn collect_function_sigs_rec(stmts: &[Stmt], out: &mut HashMap<String, FunctionS
                 return_ann,
                 ..
             } => {
+                let key = if let Some(class) = current_class {
+                    mangle_method(class, name)
+                } else {
+                    name.clone()
+                };
                 out.insert(
-                    name.clone(),
+                    key,
                     FunctionSig {
                         params: params.iter().map(|p| p.type_ann).collect(),
                         ret: *return_ann,
                     },
                 );
             }
-            Stmt::ClassDef { body, .. } | Stmt::Block(body) => collect_function_sigs_rec(body, out),
+            Stmt::ClassDef { name, body, .. } => {
+                collect_function_sigs_rec(body, out, Some(name));
+            }
+            Stmt::Block(body) => collect_function_sigs_rec(body, out, current_class),
             Stmt::If {
                 then_body,
                 elseifs,
                 else_body,
                 ..
             } => {
-                collect_function_sigs_rec(then_body, out);
+                collect_function_sigs_rec(then_body, out, current_class);
                 for (_, b) in elseifs {
-                    collect_function_sigs_rec(b, out);
+                    collect_function_sigs_rec(b, out, current_class);
                 }
                 if let Some(b) = else_body {
-                    collect_function_sigs_rec(b, out);
+                    collect_function_sigs_rec(b, out, current_class);
                 }
             }
             Stmt::Switch { cases, default, .. } => {
                 for (_, b) in cases {
-                    collect_function_sigs_rec(b, out);
+                    collect_function_sigs_rec(b, out, current_class);
                 }
                 if let Some(b) = default {
-                    collect_function_sigs_rec(b, out);
+                    collect_function_sigs_rec(b, out, current_class);
                 }
             }
-            Stmt::For { body, .. } | Stmt::While { body, .. } => collect_function_sigs_rec(body, out),
+            Stmt::For { body, .. } | Stmt::While { body, .. } => {
+                collect_function_sigs_rec(body, out, current_class);
+            }
             Stmt::TryCatch {
                 try_body,
                 catch_body,
                 ..
             } => {
-                collect_function_sigs_rec(try_body, out);
-                collect_function_sigs_rec(catch_body, out);
+                collect_function_sigs_rec(try_body, out, current_class);
+                collect_function_sigs_rec(catch_body, out, current_class);
             }
             _ => {}
         }

@@ -66,9 +66,11 @@ pub enum HirInstr {
     TryBegin { catch: LabelId },
     TryEnd,
     BindError { dst: Slot },
+    CheckThrow { catch: LabelId },
     Pop { dst: Slot }, // discard value (for expr stmt)
     CheckType { src: Slot, type_tag: u8, name: String },
     MarkConst { name: String },
+    NewInstance { dst: Slot, class_name: String, args: Vec<Slot> },
 }
 
 #[derive(Debug, Clone)]
@@ -151,10 +153,21 @@ impl fmt::Display for HirInstr {
             HirInstr::Continue(id) => write!(f, "  continue L{}", id),
             HirInstr::TryBegin { catch } => write!(f, "  try_begin L{}", catch),
             HirInstr::TryEnd => write!(f, "  try_end"),
+            HirInstr::CheckThrow { catch } => write!(f, "  check_throw L{}", catch),
             HirInstr::BindError { dst } => write!(f, "  bind_error %{}", dst),
             HirInstr::Pop { dst } => write!(f, "  pop %{}", dst),
             HirInstr::CheckType { src, type_tag, name } => write!(f, "  check_type %{} {} {}", src, type_tag, name),
             HirInstr::MarkConst { name } => write!(f, "  mark_const {}", name),
+            HirInstr::NewInstance { dst, class_name, args } => {
+                write!(f, "  %{} = new {}(", dst, class_name)?;
+                for (i, a) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "%{}", a)?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }
@@ -194,6 +207,7 @@ pub struct HirLowering<'a> {
     next_label: LabelId,
     loop_stack: Vec<(LabelId, LabelId)>, // (break_label, continue_label)
     func_scope:  Option<&'a std::collections::HashMap<String, crate::semantic::VarInfo>>,
+    catch_var:  Option<(String, Slot)>,
 }
 
 impl<'a> HirLowering<'a> {
@@ -205,6 +219,7 @@ impl<'a> HirLowering<'a> {
             next_label: 0,
             loop_stack: Vec::new(),
             func_scope: None,
+            catch_var: None,
         };
         let func_bodies = collect_func_bodies(stmts);
         for s in stmts {
@@ -225,6 +240,7 @@ impl<'a> HirLowering<'a> {
                     next_label: 0,
                     loop_stack: Vec::new(),
                     func_scope: Some(&fm.scope_vars),
+                    catch_var: None,
                 };
                 for s in &body_stmts {
                     inner.lower_stmt(s);
@@ -261,6 +277,11 @@ impl<'a> HirLowering<'a> {
     }
 
     fn resolve_slot(&self, name: &str) -> Option<Slot> {
+        if let Some((catch_name, slot)) = &self.catch_var {
+            if catch_name == name {
+                return Some(*slot);
+            }
+        }
         if self.func_scope.is_some() {
             // Inside a function: only resolve local variables, not globals
             self.func_scope.unwrap().get(name).map(|v| v.slot)
@@ -450,16 +471,20 @@ impl<'a> HirLowering<'a> {
                 self.emit(HirInstr::TryBegin { catch: catch_label });
                 for s in try_body {
                     self.lower_stmt(s);
+                    self.emit(HirInstr::CheckThrow { catch: catch_label });
                 }
                 self.emit(HirInstr::TryEnd);
                 let end_try = self.new_label();
                 self.emit(HirInstr::Jump(end_try));
                 self.emit(HirInstr::Label(catch_label));
-                let err_slot = self.resolve_slot(err_var).unwrap_or_else(|| self.alloc_slot());
+                let err_slot = self.alloc_slot();
+                self.catch_var = Some((err_var.clone(), err_slot));
                 self.emit(HirInstr::BindError { dst: err_slot });
+                self.emit(HirInstr::TryEnd);
                 for s in catch_body {
                     self.lower_stmt(s);
                 }
+                self.catch_var = None;
                 self.emit(HirInstr::Label(end_try));
             }
             Stmt::Import(_) => {}
@@ -560,6 +585,16 @@ impl<'a> HirLowering<'a> {
                     .collect();
                 let dst = self.alloc_slot();
                 self.emit(HirInstr::BuildObject { dst, pairs: pair_slots });
+                dst
+            }
+            Expr::New { class_name, args } => {
+                let arg_slots: Vec<Slot> = args.iter().map(|a| self.lower_expr(a)).collect();
+                let dst = self.alloc_slot();
+                self.emit(HirInstr::NewInstance {
+                    dst,
+                    class_name: class_name.clone(),
+                    args: arg_slots,
+                });
                 dst
             }
         }

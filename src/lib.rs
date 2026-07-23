@@ -25,13 +25,13 @@ use std::path::Path;
 /// Run source code through the compiled pipeline (semantic → HIR → Cranelift JIT).
 pub fn run_source(
     source: &str,
-    _path: Option<&Path>,
+    path: Option<&Path>,
     print_ast: bool,
     dump_hir: bool,
     strict: bool,
 ) -> Result<(), SoplangError> {
     let tokens = Lexer::new(source).tokenize()?;
-    let stmts = Parser::new(tokens).parse()?;
+    let stmts = frontend::imports::resolve_imports(Parser::new(tokens).parse()?, path)?;
     if print_ast {
         for s in &stmts {
             print!("{}", s);
@@ -54,7 +54,7 @@ pub fn run_source(
         return Ok(());
     }
     let mut backend = backend::cranelift::CraneliftBackend::new()?;
-    backend.compile_module(&hir)?;
+    backend.compile_module(&hir, &sym)?;
     backend.run_main()
 }
 
@@ -83,7 +83,7 @@ pub fn build_source(
     strict: bool,
 ) -> Result<(), SoplangError> {
     let tokens = Lexer::new(source).tokenize()?;
-    let stmts = Parser::new(tokens).parse()?;
+    let stmts = frontend::imports::resolve_imports(Parser::new(tokens).parse()?, None)?;
     let sym = semantic::analyze_with_options(&stmts, semantic::AnalyzeOptions { strict })?;
     let _hir = HirLowering::lower(&sym, &stmts);
     let backend = backend::llvm::LlvmBackend::new();

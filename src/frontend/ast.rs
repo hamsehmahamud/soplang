@@ -73,6 +73,11 @@ pub enum Expr {
     },
     List(Vec<Expr>),
     Object(Vec<(String, Expr)>),
+    /// cusub ClassName(args)
+    New {
+        class_name: String,
+        args:       Vec<Expr>,
+    },
 }
 
 impl fmt::Display for Expr {
@@ -125,6 +130,16 @@ impl fmt::Display for Expr {
                     write!(f, "{}: {}", k, v)?;
                 }
                 write!(f, "}}")
+            }
+            Expr::New { class_name, args } => {
+                write!(f, "cusub {}(", class_name)?;
+                for (i, a) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", a)?;
+                }
+                write!(f, ")")
             }
         }
     }
@@ -258,9 +273,9 @@ impl Stmt {
             }
             Stmt::ClassDef { name, parent, body } => {
                 if let Some(p) = parent {
-                    writeln!(f, "{}fasalka {} ka_dhaxal {} {{", pad, name, p)?;
+                    writeln!(f, "{}qaab {} dhaxal {} {{", pad, name, p)?;
                 } else {
-                    writeln!(f, "{}fasalka {} {{", pad, name)?;
+                    writeln!(f, "{}qaab {} {{", pad, name)?;
                 }
                 for s in body {
                     s.fmt_with_depth(f, depth + 1)?;
@@ -329,7 +344,7 @@ impl Stmt {
             Stmt::Break => writeln!(f, "{}jooji;", pad),
             Stmt::Continue => writeln!(f, "{}soco;", pad),
             Stmt::TryCatch { try_body, err_var, catch_body } => {
-                writeln!(f, "{}isku_day {{", pad)?;
+                writeln!(f, "{}fasax {{", pad)?;
                 for s in try_body {
                     s.fmt_with_depth(f, depth + 1)?;
                 }
@@ -339,7 +354,7 @@ impl Stmt {
                 }
                 writeln!(f, "{}}}", pad)
             }
-            Stmt::Import(path) => writeln!(f, "{}ka_keen {:?};", pad, path),
+            Stmt::Import(path) => writeln!(f, "{}keen {:?};", pad, path),
             Stmt::Block(stmts) => {
                 writeln!(f, "{} {{", pad)?;
                 for s in stmts {
