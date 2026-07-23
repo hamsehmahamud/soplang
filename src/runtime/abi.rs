@@ -3,19 +3,96 @@
 
 #![allow(clippy::cast_lossless, clippy::cast_possible_truncation)]
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::os::raw::c_int;
 use std::rc::Rc;
 
 use crate::error::{runtime_error, type_error, SoplangError};
 use super::stdlib;
 use super::value::{value_to_string, NativeFn, Value};
 
+const TAG_THROW: u8 = 8;
+
 fn fatal_error(e: impl std::fmt::Display) -> ! {
-    use std::io::Write;
-    let _ = std::io::stdout().flush();
-    eprintln!("{}", e);
-    std::process::exit(1);
+    raise_or_fatal(runtime_error(e.to_string(), 0, 0));
+}
+
+fn raise_or_fatal(e: SoplangError) -> ! {
+    handle_runtime_error(e);
+    unreachable!()
+}
+
+fn error_message(e: &SoplangError) -> String {
+    match e {
+        SoplangError::Runtime { msg, .. } | SoplangError::Type { msg, .. } => msg.clone(),
+        _ => e.to_string(),
+    }
+}
+
+fn throw_value() -> SoplangValue {
+    SoplangValue {
+        tag: TAG_THROW,
+        _pad: [0; 7],
+        payload: 0,
+    }
+}
+
+fn has_pending_error() -> bool {
+    PENDING_ERROR.with(|p| p.borrow().is_some())
+}
+
+fn short_circuit_if_pending() -> Option<SoplangValue> {
+    if has_pending_error() {
+        Some(throw_value())
+    } else {
+        None
+    }
+}
+
+fn handle_runtime_error(e: SoplangError) -> SoplangValue {
+    let msg = error_message(&e);
+    if TRY_DEPTH.with(|d| d.get()) > 0 {
+        PENDING_ERROR.with(|p| *p.borrow_mut() = Some(msg));
+        throw_value()
+    } else {
+        use std::io::Write;
+        let _ = std::io::stdout().flush();
+        eprintln!("{}", e);
+        std::process::exit(1);
+    }
+}
+
+thread_local! {
+    static TRY_DEPTH: Cell<u32> = Cell::new(0);
+    static PENDING_ERROR: RefCell<Option<String>> = RefCell::new(None);
+}
+
+/// Begin a try block.
+#[no_mangle]
+pub extern "C" fn soplang_try_begin() -> c_int {
+    TRY_DEPTH.with(|d| d.set(d.get().saturating_add(1)));
+    0
+}
+
+/// End a try block (success or after catch); pop the active handler.
+#[no_mangle]
+pub extern "C" fn soplang_try_end() {
+    TRY_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+    PENDING_ERROR.with(|e| *e.borrow_mut() = None);
+}
+
+/// Returns 1 if a runtime error is pending inside an active try block.
+#[no_mangle]
+pub extern "C" fn soplang_has_pending_error() -> c_int {
+    if has_pending_error() { 1 } else { 0 }
+}
+
+/// Return the caught error message as a Soplang string value.
+#[no_mangle]
+pub extern "C" fn soplang_get_caught_error() -> SoplangValue {
+    let msg = PENDING_ERROR.with(|e| e.borrow().clone().unwrap_or_default());
+    value_to_soplang(&Value::Str(msg))
 }
 
 // ----- Tag constants (match COMPILER_PLAN) -----
@@ -59,6 +136,15 @@ thread_local! {
     static GLOBAL_VARS: RefCell<HashMap<String, SoplangValue>> = RefCell::new(HashMap::new());
     static COMPILED_FN_TABLE: RefCell<Vec<CompiledFnEntry>> = RefCell::new(Vec::new());
     static CONST_GLOBALS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    static CLASS_REGISTRY: RefCell<HashMap<String, ClassRegistryEntry>> = RefCell::new(HashMap::new());
+}
+
+const INSTANCE_CLASS_FIELD: &str = "__class__";
+
+#[derive(Clone)]
+struct ClassRegistryEntry {
+    parent:  Option<String>,
+    methods: HashMap<String, i64>,
 }
 
 #[derive(Clone, Copy)]
@@ -225,10 +311,13 @@ fn binop<'a>(
     b: SoplangValue,
     f: impl FnOnce(Value, Value) -> Result<Value, SoplangError>,
 ) -> SoplangValue {
+    if let Some(v) = short_circuit_if_pending() {
+        return v;
+    }
     match (soplang_to_value(a), soplang_to_value(b)) {
         (Ok(va), Ok(vb)) => match f(va, vb) {
             Ok(v) => value_to_soplang(&v),
-            Err(_) => SoplangValue::null(),
+            Err(e) => handle_runtime_error(e),
         },
         _ => SoplangValue::null(),
     }
@@ -489,6 +578,9 @@ pub extern "C" fn soplang_ge(a: SoplangValue, b: SoplangValue) -> SoplangValue {
 
 #[no_mangle]
 pub extern "C" fn soplang_qor(v: SoplangValue) {
+    if has_pending_error() || v.tag == TAG_THROW {
+        return;
+    }
     if let Ok(val) = soplang_to_value(v) {
         println!("{}", value_to_string(&val));
     }
@@ -658,6 +750,220 @@ pub extern "C" fn soplang_or(a: SoplangValue, b: SoplangValue) -> SoplangValue {
     }
 }
 
+// ----- Class registry (OOP) -----
+
+pub fn clear_class_registry() {
+    CLASS_REGISTRY.with(|r| r.borrow_mut().clear());
+}
+
+fn global_fn_payload(name: &str) -> Option<i64> {
+    ensure_builtins();
+    GLOBAL_VARS.with(|g| {
+        g.borrow().get(name).and_then(|sv| {
+            if sv.tag == TAG_FUNC {
+                Some(sv.payload)
+            } else {
+                None
+            }
+        })
+    })
+}
+
+fn compiled_fn_entry(fn_payload: i64) -> Option<CompiledFnEntry> {
+    let native_count = NATIVE_FN_TABLE.with(|t| t.borrow().len()) as i64;
+    let compiled_idx = fn_payload - native_count;
+    COMPILED_FN_TABLE.with(|t| {
+        let v = t.borrow();
+        if compiled_idx >= 0 && (compiled_idx as usize) < v.len() {
+            Some(v[compiled_idx as usize])
+        } else {
+            None
+        }
+    })
+}
+
+fn get_instance_class(o: &Rc<RefCell<HashMap<String, Value>>>) -> Option<String> {
+    o.borrow().get(INSTANCE_CLASS_FIELD).and_then(|v| {
+        if let Value::Str(s) = v {
+            Some(s.clone())
+        } else {
+            None
+        }
+    })
+}
+
+fn resolve_method_fn_index(class_name: &str, method: &str) -> Option<i64> {
+    CLASS_REGISTRY.with(|r| {
+        let reg = r.borrow();
+        let mut current = Some(class_name.to_string());
+        while let Some(cn) = current {
+            if let Some(entry) = reg.get(&cn) {
+                if let Some(&idx) = entry.methods.get(method) {
+                    return Some(idx);
+                }
+                current = entry.parent.clone();
+            } else {
+                break;
+            }
+        }
+        None
+    })
+}
+
+fn resolve_constructor_fn_index(class_name: &str) -> Option<i64> {
+    resolve_method_fn_index(class_name, "dhaw")
+}
+
+/// Register all classes from semantic analysis after compiled functions are in globals.
+pub fn register_classes_from_sym(classes: &HashMap<String, crate::semantic::ClassMeta>) {
+    clear_class_registry();
+    for (name, meta) in classes {
+        let mut methods = HashMap::new();
+        for (method, mangled) in &meta.methods {
+            if let Some(idx) = global_fn_payload(mangled) {
+                methods.insert(method.clone(), idx);
+            }
+        }
+        CLASS_REGISTRY.with(|r| {
+            r.borrow_mut().insert(
+                name.clone(),
+                ClassRegistryEntry {
+                    parent: meta.parent.clone(),
+                    methods,
+                },
+            );
+        });
+    }
+}
+
+fn call_compiled_fn_value(
+    entry: CompiledFnEntry,
+    args: &[SoplangValue],
+) -> Result<Value, SoplangError> {
+    let sv = call_compiled_fn(entry.ptr, entry.n_params, args.as_ptr(), args.len() as i32);
+    soplang_to_value(sv)
+}
+
+fn dispatch_instance_method(
+    o: &Rc<RefCell<HashMap<String, Value>>>,
+    method: &str,
+    args: &[Value],
+) -> Result<Value, SoplangError> {
+    let class_name = get_instance_class(o).ok_or_else(|| {
+        runtime_error("Walaxkan ma ahan tusaale fasal", 0, 0)
+    })?;
+    let fn_idx = resolve_method_fn_index(&class_name, method).ok_or_else(|| {
+        runtime_error(
+            format!(
+                "Hawl '{}' lama helin qaabka '{}'",
+                method, class_name
+            ),
+            0,
+            0,
+        )
+    })?;
+    let entry = compiled_fn_entry(fn_idx).ok_or_else(|| {
+        runtime_error(format!("Hawl '{}' lama diyaarin", method), 0, 0)
+    })?;
+    let instance_sv = value_to_soplang(&Value::Object(Rc::clone(o)));
+    let mut call_args = vec![instance_sv];
+    for a in args {
+        call_args.push(value_to_soplang(a));
+    }
+    call_compiled_fn_value(entry, &call_args)
+}
+
+#[no_mangle]
+pub extern "C" fn soplang_new_instance(
+    class_ptr: *const u8,
+    class_len: usize,
+    args_ptr: *const SoplangValue,
+    n: i32,
+) -> SoplangValue {
+    if class_ptr.is_null() || class_len == 0 {
+        return SoplangValue::null();
+    }
+    let class_name = unsafe {
+        String::from_utf8_lossy(std::slice::from_raw_parts(class_ptr, class_len)).into_owned()
+    };
+    let mut fields = HashMap::new();
+    fields.insert(
+        INSTANCE_CLASS_FIELD.to_string(),
+        Value::Str(class_name.clone()),
+    );
+    let instance = Value::Object(Rc::new(RefCell::new(fields)));
+    let instance_rc = match &instance {
+        Value::Object(o) => Rc::clone(o),
+        _ => return SoplangValue::null(),
+    };
+
+    let mut user_args = Vec::new();
+    if !args_ptr.is_null() && n > 0 {
+        for i in 0..n as usize {
+            let sv = unsafe { *args_ptr.add(i) };
+            user_args.push(soplang_to_value(sv).unwrap_or(Value::Null));
+        }
+    }
+
+    if let Some(fn_idx) = resolve_constructor_fn_index(&class_name) {
+        if let Some(entry) = compiled_fn_entry(fn_idx) {
+            let instance_sv = value_to_soplang(&instance);
+            let mut call_args = vec![instance_sv];
+            for a in &user_args {
+                call_args.push(value_to_soplang(a));
+            }
+            match call_compiled_fn_value(entry, &call_args) {
+                Ok(_) => {}
+                Err(e) => fatal_error(e),
+            }
+        }
+    }
+
+    value_to_soplang(&Value::Object(instance_rc))
+}
+
+#[no_mangle]
+pub extern "C" fn soplang_register_class(
+    name_ptr: *const u8,
+    name_len: usize,
+    parent_ptr: *const u8,
+    parent_len: usize,
+    method_ptr: *const u8,
+    method_len: usize,
+    fn_payload: i64,
+) {
+    if name_ptr.is_null() || name_len == 0 || method_ptr.is_null() || method_len == 0 {
+        return;
+    }
+    let name = unsafe {
+        String::from_utf8_lossy(std::slice::from_raw_parts(name_ptr, name_len)).into_owned()
+    };
+    let parent = if parent_ptr.is_null() || parent_len == 0 {
+        None
+    } else {
+        Some(
+            unsafe {
+                String::from_utf8_lossy(std::slice::from_raw_parts(parent_ptr, parent_len))
+                    .into_owned()
+            },
+        )
+    };
+    let method = unsafe {
+        String::from_utf8_lossy(std::slice::from_raw_parts(method_ptr, method_len)).into_owned()
+    };
+    CLASS_REGISTRY.with(|r| {
+        let mut reg = r.borrow_mut();
+        let entry = reg.entry(name).or_insert_with(|| ClassRegistryEntry {
+            parent: parent.clone(),
+            methods: HashMap::new(),
+        });
+        if entry.parent.is_none() {
+            entry.parent = parent;
+        }
+        entry.methods.insert(method, fn_payload);
+    });
+}
+
 // ----- Method dispatch -----
 
 #[no_mangle]
@@ -686,10 +992,13 @@ pub extern "C" fn soplang_call_method(
             argv.push(soplang_to_value(sv).unwrap_or(Value::Null));
         }
     }
-    let result = match obj_val {
-        Value::List(l) => dispatch_list_method(&l, method, &argv),
-        Value::Object(o) => dispatch_object_method(&o, method, &argv),
-        Value::Str(s) => dispatch_string_method(&s, method, &argv),
+    let result = match &obj_val {
+        Value::Object(o) if get_instance_class(o).is_some() => {
+            dispatch_instance_method(o, method, &argv)
+        }
+        Value::List(l) => dispatch_list_method(l, method, &argv),
+        Value::Object(o) => dispatch_object_method(o, method, &argv),
+        Value::Str(s) => dispatch_string_method(s, method, &argv),
         _ => Err(runtime_error(format!("No method '{}' on this type", method), 0, 0)),
     };
     match result {
@@ -844,9 +1153,12 @@ pub extern "C" fn soplang_store_global(name: *const u8, len: usize, tag: i64, pa
     let key = String::from_utf8_lossy(key).into_owned();
     let is_const = CONST_GLOBALS.with(|c| c.borrow().contains(&key));
     if is_const {
-        fatal_error(runtime_error(
-            format!("Ma bedeli kartid qiimaha doorsamaha madoor '{}'", key), 0, 0,
+        let _ = handle_runtime_error(runtime_error(
+            format!("Ma bedeli kartid qiimaha doorsamaha madoor '{}'", key),
+            0,
+            0,
         ));
+        return;
     }
     let sv = SoplangValue { tag: tag as u8, _pad: [0; 7], payload };
     GLOBAL_VARS.with(|g| g.borrow_mut().insert(key, sv));
@@ -884,10 +1196,16 @@ pub extern "C" fn soplang_check_type(tag: i64, payload: i64, expected_type: i64,
         let type_name = match expected_type {
             1 => "abn", 2 => "jajab", 3 => "qoraal", 4 => "bool", 5 => "teed", 6 => "walax", _ => "?",
         };
-        fatal_error(type_error(
+        let err = type_error(
             format!("'{}' waa {} laakin qiimaheeda '{}' ma ahan {}", name, type_name, val, type_name),
-            0, 0,
-        ));
+            0,
+            0,
+        );
+        if TRY_DEPTH.with(|d| d.get()) > 0 {
+            PENDING_ERROR.with(|p| *p.borrow_mut() = Some(error_message(&err)));
+        } else {
+            fatal_error(err);
+        }
     }
 }
 
@@ -924,10 +1242,15 @@ pub fn register_compiled_fn(ptr: *const u8, n_params: usize) -> i64 {
 /// Call a callee with args. Callee must be SoplangValue with TAG_FUNC (native or user fn).
 #[no_mangle]
 pub extern "C" fn soplang_call(callee: SoplangValue, args: *const SoplangValue, n: i32) -> SoplangValue {
+    if let Some(v) = short_circuit_if_pending() {
+        return v;
+    }
     if callee.tag != TAG_FUNC {
         let val = soplang_to_value(callee).unwrap_or(Value::Null);
-        fatal_error(runtime_error(
-            format!("'{}' ma ahan hawl, lama wici karo", value_to_string(&val)), 0, 0,
+        return handle_runtime_error(runtime_error(
+            format!("'{}' ma ahan hawl, lama wici karo", value_to_string(&val)),
+            0,
+            0,
         ));
     }
     if let Some(f) = native_fn_get(callee.payload) {
@@ -944,7 +1267,7 @@ pub extern "C" fn soplang_call(callee: SoplangValue, args: *const SoplangValue, 
         }
         match f(argv) {
             Ok(v) => value_to_soplang(&v),
-            Err(e) => fatal_error(e),
+            Err(e) => handle_runtime_error(e),
         }
     } else {
         let native_count = NATIVE_FN_TABLE.with(|t| t.borrow().len()) as i64;

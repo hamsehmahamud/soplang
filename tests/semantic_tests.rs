@@ -42,3 +42,48 @@ fn test_semantic_all_examples() {
         );
     }
 }
+
+#[test]
+fn test_semantic_mangles_class_methods() {
+    let source = r#"
+        qaab A {
+            hawl foo() { celi 1 }
+        }
+        qaab B dhaxal A {
+            hawl bar() { celi 2 }
+        }
+    "#;
+    let tokens = Lexer::new(source).tokenize().unwrap();
+    let stmts = Parser::new(tokens).parse().unwrap();
+    let sym = semantic::analyze(&stmts).unwrap();
+    assert!(sym.functions.iter().any(|f| f.name == "A::foo" && f.is_method));
+    assert!(sym.functions.iter().any(|f| f.name == "B::bar" && f.is_method));
+    assert_eq!(sym.classes.get("B").unwrap().parent.as_deref(), Some("A"));
+}
+
+#[test]
+fn test_semantic_rejects_unknown_parent() {
+    let source = r#"
+        qaab Child dhaxal Missing {
+            hawl foo() { celi 1 }
+        }
+    "#;
+    let tokens = Lexer::new(source).tokenize().unwrap();
+    let stmts = Parser::new(tokens).parse().unwrap();
+    assert!(semantic::analyze(&stmts).is_err());
+}
+
+#[test]
+fn test_import_resolves_and_merges() {
+    use std::path::Path;
+    use soplang::frontend::imports;
+    use soplang::Stmt;
+
+    let main = Path::new("examples/16_import.sop");
+    let source = std::fs::read_to_string(main).unwrap();
+    let tokens = Lexer::new(&source).tokenize().unwrap();
+    let stmts = imports::resolve_imports(Parser::new(tokens).parse().unwrap(), Some(main)).unwrap();
+    assert!(stmts.iter().any(|s| matches!(s, Stmt::FuncDef { name, .. } if name == "laba")));
+    let sym = semantic::analyze(&stmts).unwrap();
+    assert!(sym.functions.iter().any(|f| f.name == "laba"));
+}

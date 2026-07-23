@@ -147,3 +147,9 @@ pub fn type_error(msg: impl Into<String>, line: usize, col: usize) -> SoplangErr
 pub fn type_error_ex(msg: impl Into<String>, line: usize, col: usize, meta: ErrorMeta) -> SoplangError {
     SoplangError::Type { msg: msg.into(), line, col, meta }
 }
+pub fn import_error(msg: impl Into<String>, line: usize, col: usize) -> SoplangError {
+    SoplangError::Import { msg: msg.into(), line, col, meta: ErrorMeta::default() }
+}
+pub fn import_error_ex(msg: impl Into<String>, line: usize, col: usize, meta: ErrorMeta) -> SoplangError {
+    SoplangError::Import { msg: msg.into(), line, col, meta }
+}

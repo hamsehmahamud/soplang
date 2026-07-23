@@ -15,6 +15,7 @@ use cranelift_module::{FuncId, Linkage, Module};
 use crate::error::{runtime_error, SoplangError};
 use crate::hir::{BinOpKind, HirConst, HirFunction, HirInstr, HirModule, UnOpKind};
 use crate::runtime;
+use crate::semantic::SymbolTable;
 
 struct CompiledFnInfo {
     name: String,
@@ -72,6 +73,12 @@ fn register_runtime_symbols(builder: &mut JITBuilder) {
     sym!(builder, soplang_call_method);
     sym!(builder, soplang_check_type);
     sym!(builder, soplang_mark_const);
+    sym!(builder, soplang_new_instance);
+    sym!(builder, soplang_register_class);
+    sym!(builder, soplang_try_begin);
+    sym!(builder, soplang_try_end);
+    sym!(builder, soplang_has_pending_error);
+    sym!(builder, soplang_get_caught_error);
 }
 
 fn make_sig(n_params: usize, n_returns: usize) -> Signature {
@@ -120,6 +127,12 @@ fn max_slot_in_body(body: &[HirInstr]) -> usize {
             HirInstr::Return { val } => { mx = mx.max(*val + 1); }
             HirInstr::JumpIf { cond, .. } => { mx = mx.max(*cond + 1); }
             HirInstr::CheckType { src, .. } => { mx = mx.max(*src + 1); }
+            HirInstr::NewInstance { dst, args, .. } => {
+                mx = mx.max(*dst + 1);
+                for s in args {
+                    mx = mx.max(*s + 1);
+                }
+            }
             _ => {}
         }
     }
@@ -154,7 +167,8 @@ impl CraneliftBackend {
         })
     }
 
-    pub fn compile_module(&mut self, hir: &HirModule) -> Result<(), SoplangError> {
+    pub fn compile_module(&mut self, hir: &HirModule, sym: &SymbolTable) -> Result<(), SoplangError> {
+        runtime::clear_class_registry();
         for (i, f) in hir.functions.iter().enumerate() {
             self.compile_function(f, i)?;
         }
@@ -163,6 +177,7 @@ impl CraneliftBackend {
             .finalize_definitions()
             .map_err(|e| runtime_error(e.to_string(), 0, 0))?;
         self.register_compiled_fns();
+        runtime::register_classes_from_sym(&sym.classes);
         Ok(())
     }
 
@@ -604,7 +619,46 @@ fn compile_body(
                 builder.ins().call(fref, &[nptr, nlen]);
             }
 
-            HirInstr::Pop { .. } | HirInstr::TryBegin { .. } | HirInstr::TryEnd | HirInstr::BindError { .. } => {}
+            HirInstr::NewInstance { dst, class_name, args } => {
+                if terminated { continue; }
+                let arg_vals: Vec<(Value, Value)> = args
+                    .iter()
+                    .map(|a| (builder.use_var(var_tags[*a]), builder.use_var(var_pays[*a])))
+                    .collect();
+                let (dt, dp) = emit_new_instance(builder, module, class_name, &arg_vals)?;
+                builder.def_var(var_tags[*dst], dt);
+                builder.def_var(var_pays[*dst], dp);
+            }
+
+            HirInstr::Pop { .. } => {}
+
+            HirInstr::TryBegin { catch: _ } => {
+                if terminated { continue; }
+                call_rt_void(builder, module, "soplang_try_begin", &[])?;
+            }
+
+            HirInstr::TryEnd => {
+                if terminated { continue; }
+                call_rt_void(builder, module, "soplang_try_end", &[])?;
+            }
+
+            HirInstr::CheckThrow { catch } => {
+                if terminated { continue; }
+                let catch_block = block_map[catch];
+                let continue_block = builder.create_block();
+                let pending = call_rt_i64(builder, module, "soplang_has_pending_error", &[])?;
+                let zero = builder.ins().iconst(types::I64, 0);
+                let test = builder.ins().icmp(IntCC::NotEqual, pending, zero);
+                builder.ins().brif(test, catch_block, &[], continue_block, &[]);
+                builder.switch_to_block(continue_block);
+            }
+
+            HirInstr::BindError { dst } => {
+                if terminated { continue; }
+                let (t, p) = call_rt(builder, module, "soplang_get_caught_error", &[])?;
+                builder.def_var(var_tags[*dst], t);
+                builder.def_var(var_pays[*dst], p);
+            }
         }
     }
 
@@ -636,6 +690,36 @@ fn call_rt(
     let call = builder.ins().call(fref, args);
     let r = builder.inst_results(call);
     Ok((r[0], r[1]))
+}
+
+fn call_rt_i64(
+    builder: &mut FunctionBuilder,
+    module: &mut cranelift_jit::JITModule,
+    name: &str,
+    args: &[Value],
+) -> Result<Value, SoplangError> {
+    let sig = make_sig(args.len(), 1);
+    let fid = module
+        .declare_function(name, Linkage::Import, &sig)
+        .map_err(|e| runtime_error(e.to_string(), 0, 0))?;
+    let fref = module.declare_func_in_func(fid, builder.func);
+    let call = builder.ins().call(fref, args);
+    Ok(builder.inst_results(call)[0])
+}
+
+fn call_rt_void(
+    builder: &mut FunctionBuilder,
+    module: &mut cranelift_jit::JITModule,
+    name: &str,
+    args: &[Value],
+) -> Result<(), SoplangError> {
+    let sig = make_sig(args.len(), 0);
+    let fid = module
+        .declare_function(name, Linkage::Import, &sig)
+        .map_err(|e| runtime_error(e.to_string(), 0, 0))?;
+    let fref = module.declare_func_in_func(fid, builder.func);
+    builder.ins().call(fref, args);
+    Ok(())
 }
 
 fn emit_store_global(
@@ -760,4 +844,39 @@ fn emit_call_method(
     };
 
     call_rt(builder, module, "soplang_call_method", &[ot, opay, mptr, mlen, args_ptr, n_val])
+}
+
+fn emit_new_instance(
+    builder: &mut FunctionBuilder,
+    module: &mut cranelift_jit::JITModule,
+    class_name: &str,
+    args: &[(Value, Value)],
+) -> Result<(Value, Value), SoplangError> {
+    let cptr = builder.ins().iconst(types::I64, class_name.as_ptr() as i64);
+    let clen = builder.ins().iconst(types::I64, class_name.len() as i64);
+    let n = args.len();
+    let (args_ptr, n_val) = if n == 0 {
+        (
+            builder.ins().iconst(types::I64, 0),
+            builder.ins().iconst(types::I64, 0),
+        )
+    } else {
+        let size = (n * 16) as u32;
+        let slot = builder.func.create_sized_stack_slot(StackSlotData::new(
+            StackSlotKind::ExplicitSlot, size, 3,
+        ));
+        let base = builder.ins().stack_addr(types::I64, slot, 0);
+        for (i, (t, p)) in args.iter().enumerate() {
+            let off = (i * 16) as i32;
+            builder.ins().store(MemFlags::trusted(), *t, base, off);
+            builder.ins().store(MemFlags::trusted(), *p, base, off + 8);
+        }
+        (base, builder.ins().iconst(types::I64, n as i64))
+    };
+    call_rt(
+        builder,
+        module,
+        "soplang_new_instance",
+        &[cptr, clen, args_ptr, n_val],
+    )
 }

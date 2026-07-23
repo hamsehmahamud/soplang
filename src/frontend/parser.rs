@@ -98,11 +98,11 @@ impl Parser {
                 self.advance();
                 return Ok(Stmt::Continue);
             }
-            TokenType::IskuDay => return self.parse_try_catch(line, col),
-            TokenType::KaKeen => return self.parse_import(),
-            TokenType::Fasalka => return self.parse_class_def(),
+            TokenType::Fasax => return self.parse_try_catch(line, col),
+            TokenType::Keen => return self.parse_import(),
+            TokenType::Qaab => return self.parse_class_def(),
             TokenType::LBrace => return self.parse_block(),
-            TokenType::Identifier => return self.parse_identifier_stmt(line, col),
+            TokenType::Identifier | TokenType::Nafta => return self.parse_identifier_stmt(line, col),
             _ => {}
         }
 
@@ -199,6 +199,10 @@ impl Parser {
                 let s = t.lexeme.clone();
                 self.advance();
                 Ok(s)
+            }
+            TokenType::Nafta => {
+                self.advance();
+                Ok("nafta".to_string())
             }
             _ => Err(parser_error(
                 format!("Waxaa la filayay magac doorsame, laakiin waxaa la helay {:?}", t.lexeme),
@@ -433,7 +437,7 @@ impl Parser {
     }
 
     fn parse_try_catch(&mut self, _line: usize, _col: usize) -> Result<Stmt, SoplangError> {
-        self.advance(); // isku_day
+        self.advance(); // fasax
         self.expect(TokenType::LBrace)?;
         let try_body = self.parse_block_stmts()?;
         self.expect(TokenType::RBrace)?;
@@ -452,7 +456,7 @@ impl Parser {
     }
 
     fn parse_import(&mut self) -> Result<Stmt, SoplangError> {
-        self.advance(); // ka_keen
+        self.advance(); // keen
         let t = self.peek();
         let path = match &t.kind {
             TokenType::String => {
@@ -472,9 +476,11 @@ impl Parser {
     }
 
     fn parse_class_def(&mut self) -> Result<Stmt, SoplangError> {
-        self.advance(); // fasalka
+        let t = self.peek();
+        let (line, col) = (t.line, t.col);
+        self.advance(); // qaab
         let name = self.expect_identifier()?;
-        let parent = if self.check(TokenType::KaDhaxal) {
+        let parent = if self.check(TokenType::Dhaxal) {
             self.advance();
             Some(self.expect_identifier()?)
         } else {
@@ -483,6 +489,15 @@ impl Parser {
         self.expect(TokenType::LBrace)?;
         let body = self.parse_block_stmts()?;
         self.expect(TokenType::RBrace)?;
+        for s in &body {
+            if !matches!(s, Stmt::FuncDef { .. }) {
+                return Err(parser_error(
+                    "Jirka qaabka waa in uu ka koobnaado hawl (methods) kaliya",
+                    line,
+                    col,
+                ));
+            }
+        }
         Ok(Stmt::ClassDef {
             name,
             parent,
@@ -506,7 +521,10 @@ impl Parser {
     }
 
     fn parse_identifier_stmt(&mut self, line: usize, col: usize) -> Result<Stmt, SoplangError> {
-        let name = self.peek().lexeme.clone();
+        let name = match &self.peek().kind {
+            TokenType::Nafta => "nafta".to_string(),
+            _ => self.peek().lexeme.clone(),
+        };
         self.advance();
 
         // Chain of .prop and [index] - then maybe = expr
@@ -799,6 +817,17 @@ impl Parser {
             TokenType::Null => {
                 self.advance();
                 Ok(Expr::Literal(Literal::Null))
+            }
+            TokenType::Cusub => {
+                self.advance();
+                let class_name = self.expect_identifier()?;
+                self.expect(TokenType::LParen)?;
+                let args = self.parse_call_args()?;
+                Ok(Expr::New { class_name, args })
+            }
+            TokenType::Nafta => {
+                self.advance();
+                Ok(Expr::Identifier("nafta".to_string()))
             }
             TokenType::LParen => {
                 self.advance();

@@ -117,8 +117,8 @@ pub enum TokenType {
     Door, Madoor, Hawl, Celi, Qor, Gelin,
     Haddii, HaddiiKale, Ugudambeyn,
     Dooro, Xaalad, Kuceli, Intay,
-    Jooji, Soco, IskuDay, Qabo,
-    KaKeen, Fasalka, KaDhaxal, Cusub, Nafta,
+    Jooji, Soco, Fasax, Qabo,
+    Keen, Qaab, Dhaxal, Cusub, Nafta,
     // Static type keywords
     Abn, Jajab, Qoraal, Bool, Teed, Walax,
     // Literals
@@ -500,7 +500,7 @@ Method calls on instance:
 2. Bind `nafta` to instance in a new env
 3. Execute method body
 
-#### 4.3 — Import (`ka_keen`)
+#### 4.3 — Import (`keen`)
 
 ```rust
 fn exec_import(&mut self, filename: &str, current_file: &Path, env: Rc<RefCell<Env>>)
@@ -517,7 +517,7 @@ fn exec_import(&mut self, filename: &str, current_file: &Path, env: Rc<RefCell<E
 }
 ```
 
-#### 4.4 — Try/catch (`isku_day/qabo`)
+#### 4.4 — Try/catch (`fasax/qabo`)
 
 ```rust
 fn exec_try_catch(&mut self, try_body: &[Stmt], err_var: &str, catch_body: &[Stmt], env: Rc<RefCell<Env>>)

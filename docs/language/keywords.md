@@ -202,3 +202,71 @@ q = "abaaba"
 natiijo = q.beddel_dhammaan("a", "x")
 qor(natiijo)  # xbxxbx
 ```
+
+## Object-Oriented Programming (OOP)
+
+| Keyword / concept | Meaning | English | Example |
+| ----------------- | ------- | ------- | ------- |
+| `qaab` | Class definition | `class` | `qaab Bisad { ... }` |
+| `dhaxal` | Inherit from parent class | `extends` | `qaab Bisad dhaxal Xayawaan { ... }` |
+| `cusub` | Create a new instance | `new` | `door b = cusub Bisad("Mia")` |
+| `nafta` | Current instance (self) | `this` / `self` | `nafta.magac = magac` |
+| `dhaw` | Constructor method (auto-called by `cusub`) | `constructor` | `hawl dhaw(magac) { nafta.magac = magac }` |
+
+**Class example:**
+
+```soplang
+qaab Xayawaan {
+    hawl cod() {
+        celi "xayawaan"
+    }
+}
+
+qaab Bisad dhaxal Xayawaan {
+    hawl dhaw(magac) {
+        nafta.magac = magac
+    }
+    hawl salaam() {
+        qor("Salaan, " + nafta.magac)
+    }
+}
+
+door bisad = cusub Bisad("Mia")
+bisad.salaam()
+qor(bisad.magac)
+```
+
+Notes:
+- Class bodies may contain only `hawl` (method) definitions.
+- `nafta` is injected automatically as the first parameter of every class method.
+- Instance fields are stored as object properties; read them with `obj.field`.
+- Method lookup walks the inheritance chain (child overrides parent).
+
+## Modules and error handling
+
+| Keyword | Meaning | English | Example |
+| ------- | ------- | ------- | ------- |
+| `keen` | Import another `.sop` file | `import` | `keen "lib.sop"` |
+| `fasax` | Start a protected try block | `try` | `fasax { ... } qabo (e) { ... }` |
+| `qabo` | Catch block with error variable | `catch` | `qabo (khalad) { qor(khalad) }` |
+
+**Import example:**
+
+```soplang
+keen "_math_lib.sop"
+qor(laba() + afar())
+```
+
+Imported files are resolved relative to the current file's directory. Top-level definitions (functions, variables, classes) from the imported file become available in the importing program.
+
+**Try/catch example:**
+
+```soplang
+fasax {
+    qor(1 / 0)
+} qabo (khalad) {
+    qor("Qabtay: " + khalad)
+}
+```
+
+Runtime errors inside the `fasax` block are caught; the error message is bound to the variable in `qabo (...)`.

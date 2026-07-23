@@ -1,0 +1,18 @@
+qaab Xayawaan {
+    hawl cod() {
+        celi "xayawaan"
+    }
+}
+
+qaab Bisad dhaxal Xayawaan {
+    hawl dhaw(magac) {
+        nafta.magac = magac
+    }
+    hawl salaam() {
+        qor("Salaan, " + nafta.magac)
+    }
+}
+
+door bisad = cusub Bisad("Mia")
+bisad.salaam()
+qor(bisad.cod())

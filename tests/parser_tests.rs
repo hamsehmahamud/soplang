@@ -48,3 +48,46 @@ fn test_parse_if_then() {
     assert_eq!(stmts.len(), 1);
     assert!(matches!(&stmts[0], Stmt::If { .. }));
 }
+
+#[test]
+fn test_parse_class_and_new() {
+    let source = r#"
+        qaab Bisad {
+            hawl dhaw(magac) {
+                nafta.magac = magac
+            }
+        }
+        door x = cusub Bisad("Mia")
+    "#;
+    let mut lexer = Lexer::new(source);
+    let tokens = lexer.tokenize().unwrap();
+    let mut parser = Parser::new(tokens);
+    let stmts = parser.parse().unwrap();
+    assert_eq!(stmts.len(), 2);
+    assert!(matches!(&stmts[0], Stmt::ClassDef { .. }));
+    if let Stmt::VarDecl { value, .. } = &stmts[1] {
+        assert!(matches!(value, Expr::New { .. }));
+    } else {
+        panic!("expected var decl with cusub");
+    }
+}
+
+#[test]
+fn test_parse_import_and_try_catch() {
+    let source = r#"
+        keen "lib.sop"
+        fasax {
+            qor(1)
+        } qabo (e) {
+            qor(e)
+        }
+    "#;
+    let tokens = Lexer::new(source).tokenize().unwrap();
+    let stmts = Parser::new(tokens).parse().unwrap();
+    assert!(matches!(&stmts[0], Stmt::Import(_)));
+    if let Stmt::TryCatch { err_var, .. } = &stmts[1] {
+        assert_eq!(err_var, "e");
+    } else {
+        panic!("expected try/catch");
+    }
+}
