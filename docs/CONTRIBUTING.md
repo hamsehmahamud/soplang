@@ -203,4 +203,4 @@ cargo test
 
 ## Code of Conduct
 
-Please be respectful and inclusive in your interactions with other contributors. We aim to foster an open and welcoming community. For detailed guidelines, please read our [Code of Conduct](../CODE_OF_CONDUCT.md).
+Please be respectful and inclusive in your interactions with other contributors. We aim to foster an open and welcoming community. For detailed guidelines, please read our [Code of Conduct](CODE_OF_CONDUCT.md).
